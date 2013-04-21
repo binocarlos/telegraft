@@ -31,5 +31,10 @@ module.exports = {
     
   */
 	wire:require('./wire'),
-  device:require('./device')
+  device:require('./device'),
+  router:require('./router'),
+  hq:{
+    client:require('./hq.client'),
+    server:require('./hq.server')
+  }
 }

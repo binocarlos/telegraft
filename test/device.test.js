@@ -54,6 +54,33 @@ describe('device', function(){
 
 	})
 
+	it('should do an RPC loop with a JSON packet', function(done){
+
+		var address = 'tcp://127.0.0.1:5678';
+
+		wires.server = telegraft.device.rpcserver('bind');
+		wires.client = telegraft.device.rpcclient('connect');
+
+		wires.server.on('request', function(req, answer){
+			answer({
+				testkey:req.testkey + 10
+			});
+		})
+
+		wires.server.plugin(address);
+		wires.client.plugin(address);
+
+		var answer = wires.client.send({
+			testkey:378
+		})
+
+		answer.then(function(value){
+			value.testkey.should.equal(388);
+			done();
+		})
+
+	})
+
 	it('should do a broadcast loop', function(finish){
 
 		var address = 'tcp://127.0.0.1:5678';

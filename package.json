@@ -28,7 +28,8 @@
     "xmldom": "~0.1.15",
     "css-selector-parser": "~1.0.3",
     "q": "~0.9.3",
-    "eventemitter2": "~0.4.11"
+    "eventemitter2": "~0.4.11",
+    "deck": "0.0.4"
   },
   "devDependencies": {
     "grunt": "~0.4.1",
