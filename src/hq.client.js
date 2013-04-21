@@ -21,6 +21,8 @@ var util = require('util');
 var Device = require('./device');
 var Router = require('./router');
 var Mesh = require('./mesh');
+var Q = require('q');
+var _ = require('lodash');
 
 module.exports = factory;
 
@@ -99,10 +101,8 @@ HQClient.prototype.rpcserver = function(route, worker){
 */
 HQClient.prototype.rpcclient = function(route){
 
-	var client = Device.rpcclient('connect');
-
 	var mesh = new Mesh({
-		wire:client,
+		wire:Device.rpcclient('connect'),
 		router:this.router,
 		route:route,
 		mode:'combine'
@@ -111,6 +111,106 @@ HQClient.prototype.rpcclient = function(route){
 	return mesh;
 }
 
+/*
+
+	returns a function that will accept a route, packet and return a promise with the result of the query
+
+	the proxy will use the router to generate the socket if needed
+
+	this gives a way to transparently communicate to any part of the network
+	
+*/
+HQClient.prototype.rpcproxy = function(){
+
+	var self = this;
+
+	var meshcache = {};
+
+	var proxy = function(){}
+
+	proxy.send = function(route, packet){
+
+		var deferred = Q.defer();
+
+		function usemesh(mesh){
+			mesh
+				.send(packet)
+				.then(function(packet){
+					deferred.resolve(packet);
+				}, function(reason){
+					deferred.reject(reason);
+				})
+		}
+
+		process.nextTick(function(){
+
+			/*
+		
+				do a search for workers
+				
+			*/
+			var result = self.router.search(route);
+
+			/*
+			
+				we have no routes
+				
+			*/
+			if(result.workers.length<=0){
+				deferred.reject(new Error("no workers found"));
+			}
+			else{
+				var matchedroute = result.matchedroute;
+
+				/*
+				
+					we already have the wire for this route cached
+					
+				*/
+				if(meshcache[matchedroute]){
+					usemesh(meshcache[matchedroute]);
+				}
+				/*
+				
+					create a new mesh for this route
+
+					get it to self delete upon emptying
+					
+				*/
+				else{
+					var mesh = new Mesh({
+						wire:Device.rpcclient('connect'),
+						router:self.router,
+						route:matchedroute,
+						mode:'combine'
+					})
+
+					meshcache[matchedroute] = mesh;
+
+					mesh.on('empty', function(){
+						delete(meshcache[matchedroute]);
+					})
+
+					setTimeout(function(){
+						usemesh(mesh);
+					}, 20)
+				}
+			}
+		})
+
+		return deferred.promise;
+	}
+
+	proxy.unplug = function(){
+		_.each(meshcache, function(mesh){
+			mesh.unplug();
+		})
+		meshcache = {};
+	}
+
+	return proxy;
+	
+}
 
 /*
 
@@ -126,7 +226,7 @@ HQClient.prototype.register_service = function(route, worker){
 	})
 
 	answer.then(function(packet){
-		var state = packet.result;
-		self.router.initialize(state);
+		var result = packet.result;
+		// worker has been added
 	})
 }

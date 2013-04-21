@@ -21,13 +21,13 @@ describe('router', function(){
 		})
 
 		var results1 = router.search('warehouse:/hello/123');
-		results1.length.should.equal(2);
-		results1[0].id.should.equal(10);
-		results1[1].id.should.equal(11);
+		results1.workers.length.should.equal(2);
+		results1.workers[0].id.should.equal(10);
+		results1.workers[1].id.should.equal(11);
 
 		var results2 = router.search('warehouse:/other');
-		results2.length.should.equal(1);
-		results2[0].id.should.equal(12);
+		results2.workers.length.should.equal(1);
+		results2.workers[0].id.should.equal(12);
 
 	})
 
@@ -64,7 +64,7 @@ describe('router', function(){
 
 		counter.should.equal(3);
 		var results = router.search('warehouse:/hello');
-		results.length.should.equal(1);
+		results.workers.length.should.equal(1);
 
 	})
 

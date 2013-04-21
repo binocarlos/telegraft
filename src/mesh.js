@@ -53,7 +53,7 @@ function Mesh(options){
 
 	var initial = this.router.search(this.route);
 
-	_.each(initial, function(worker){
+	_.each(initial.workers, function(worker){
 		self.addworker(worker);
 	})
 
@@ -97,6 +97,10 @@ Mesh.prototype.removeworker = function(worker){
 			this.wire.plugin(newworker.address);
 			this.connected[newworker.id] = newworker;
 		}
+	}
+
+	if(_.keys(this.available).length<=0){
+		this.emit('empty');
 	}
 }
 

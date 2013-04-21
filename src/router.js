@@ -18,6 +18,7 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var _ = require('lodash');
+var tools = require('./tools');
 
 var Device = require('./device');
 
@@ -49,55 +50,6 @@ function Router(){
 
 util.inherits(Router, EventEmitter);
 
-Router.prototype.addroutes = function(route, worker){
-	this.addroute(route, worker);
-
-	var parts = route.split('/');
-
-	/*
-	
-		this means it is a top level route
-
-			warehouse:/
-
-		without a path as opposed to
-
-			warehouse:/some/path
-
-		for these we will match the top level - (warehouse:/)
-
-		if a path if included - we will not match the top level
-		
-	*/
-	var matchtoplevel = parts[1]===null || parts[1]==='';
-	
-	while(parts.length>0){
-		parts.pop();
-		if(parts.length>0){
-
-			if(parts.length==1 && !matchtoplevel){
-				break;
-			}
-
-			this.addroute(parts.join('/'), worker);	
-		}
-		
-	}
-	return this;
-}
-
-Router.prototype.removeroutes = function(route, worker){
-	this.removeroute(route, worker);
-
-	var parts = route.split('/');
-
-	while(parts.length>0){
-		parts.pop();
-		this.removeroute(parts.join('/'), worker);
-	}
-	return this;
-}
-
 Router.prototype.addroute = function(route, worker){
 	var workerids = this.state.routes[route] || {};
 	workerids[worker.id] = new Date().getTime();
@@ -105,6 +57,7 @@ Router.prototype.addroute = function(route, worker){
 	routes[route] = true;
 	worker.routes = routes;
 	this.state.routes[route] = workerids;
+	this.emit('added', route, worker);
 	this.emit('added.' + route, route, worker);
 	return this;
 }
@@ -116,12 +69,26 @@ Router.prototype.removeroute = function(route, worker){
 	delete(routes[route]);
 	worker.routes = routes;
 	this.state.routes[route] = workerids;
+	this.emit('removed', route, worker);
 	this.emit('removed.' + route, route, worker);
 	return this;
 }
 
 Router.prototype.initialize = function(state){
+
+	if(!state){
+		return;
+	}
+
 	this.state = state;
+}
+
+Router.prototype.processroute = function(route){
+	if(route.charAt(route.length-1)===':'){
+		route += '/';
+	}
+
+	return route;
 }
 
 Router.prototype.search = function(route){
@@ -134,10 +101,15 @@ Router.prototype.search = function(route){
 	var workerids = this.state.routes[route];
 
 	function mapids(ids, finalroute){
-		var results = _.map(_.keys(ids || {}), function(id){
+		var workers = _.map(_.keys(ids || {}), function(id){
 			return self.state.workers[id];
 		})
-		results.finalroute = finalroute;
+
+		var results = {
+			matchedroute:finalroute,
+			workers:workers
+		}
+
 		self.cache[route] = results;
 		return results;
 	}
@@ -149,7 +121,7 @@ Router.prototype.search = function(route){
 	var parts = route.split('/');
 	while(!workerids && parts.length>0){
 		parts.pop();
-		workerids = self.state.routes[parts.join('/')];
+		workerids = self.state.routes[self.processroute(parts.join('/'))];
 	}
 
 	var finalroute = parts.join('/');
@@ -160,12 +132,12 @@ Router.prototype.search = function(route){
 Router.prototype.add = function(route, worker){
 	this.cache = {};
 	this.state.workers[worker.id] = worker;
-	this.addroutes(route, worker);
+	this.addroute(route, worker);
 	return this;
 }
 
 Router.prototype.remove = function(route, worker){
 	this.cache = {};
-	this.removeroutes(route, worker);
+	this.removeroute(route, worker);
 	return this;
 }
