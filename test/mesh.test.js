@@ -33,16 +33,18 @@ describe('HQ', function(){
 		unplugged();
 	})
 
-	it('should auto-mount servers and clients', function(done){
+	it('should auto-mount RPC servers and clients', function(done){
 
-		wires.hqserver = telegraft.hq.server(endpoints);
-		wires.hqclient = telegraft.hq.client(endpoints);
+		wires.hqserver = telegraft.server(endpoints);
+		wires.hqclient = telegraft.client(endpoints);
 
-		wires.server = wires.hqclient.rpcserver('warehouse:/api', {
+		wires.server = wires.hqclient.rpcserver({
 			id:'server1',
 			protocol:'rpc',
 			address:'tcp://127.0.0.1:5680'
 		})
+
+		wires.server.bind('warehouse:/api');
 
 		wires.server.on('request', function(req, answer){
 			answer(req + ' world');
@@ -67,9 +69,8 @@ describe('HQ', function(){
 
 	it('should load balance between multiple RPC servers', function(done){
 
-		
-		wires.hqserver = telegraft.hq.server(endpoints);
-		wires.hqclient = telegraft.hq.client(endpoints);
+		wires.hqserver = telegraft.server(endpoints);
+		wires.hqclient = telegraft.client(endpoints);
 
 		var counters = {
 			server1:0,
@@ -78,23 +79,26 @@ describe('HQ', function(){
 			total:0
 		}
 
-		wires.server1 = wires.hqclient.rpcserver('warehouse:/api', {
+		wires.server1 = wires.hqclient.rpcserver({
 			id:'server1',
-			protocol:'rpc',
 			address:'tcp://127.0.0.1:5668'
 		})
 
-		wires.server2 = wires.hqclient.rpcserver('warehouse:/api', {
+		wires.server1.bind('warehouse:/api');
+
+		wires.server2 = wires.hqclient.rpcserver({
 			id:'server2',
-			protocol:'rpc',
 			address:'tcp://127.0.0.1:5669'
 		})
 
-		wires.server3 = wires.hqclient.rpcserver('warehouse:/api', {
+		wires.server2.bind('warehouse:/api');
+
+		wires.server3 = wires.hqclient.rpcserver({
 			id:'server3',
-			protocol:'rpc',
 			address:'tcp://127.0.0.1:5667'
 		})
+
+		wires.server3.bind('warehouse:/api');
 
 		wires.server1.on('request', function(req, answer){
 			counters.server1++;
@@ -149,8 +153,8 @@ describe('HQ', function(){
 
 	it('should proxy between seperate RPC servers', function(done){
 
-		wires.hqserver = telegraft.hq.server(endpoints);
-		wires.hqclient = telegraft.hq.client(endpoints);
+		wires.hqserver = telegraft.server(endpoints);
+		wires.hqclient = telegraft.client(endpoints);
 
 		var counters = {
 			server1:0,
@@ -159,23 +163,29 @@ describe('HQ', function(){
 			total:0
 		}
 
-		wires.server1 = wires.hqclient.rpcserver('warehouse:/api/different', {
+		wires.server1 = wires.hqclient.rpcserver({
 			id:'server1',
 			protocol:'rpc',
 			address:'tcp://127.0.0.1:5668'
 		})
 
-		wires.server2 = wires.hqclient.rpcserver('warehouse:/api/apples/sub', {
+		wires.server1.bind('warehouse:/api/different');
+
+		wires.server2 = wires.hqclient.rpcserver({
 			id:'server2',
 			protocol:'rpc',
 			address:'tcp://127.0.0.1:5669'
 		})
 
-		wires.server3 = wires.hqclient.rpcserver('warehouse:/api/apples', {
+		wires.server2.bind('warehouse:/api/apples/sub');
+
+		wires.server3 = wires.hqclient.rpcserver({
 			id:'server3',
 			protocol:'rpc',
 			address:'tcp://127.0.0.1:5667'
 		})
+
+		wires.server3.bind('warehouse:/api/apples');
 
 		wires.server1.on('request', function(req, answer){
 			counters.server1++;
@@ -222,7 +232,7 @@ describe('HQ', function(){
 			},
 
 			function(next){
-				var answer = wires.proxy.send('warehouse:/api/apples/sub/12334', 'subyo');
+				var answer = wires.proxy.send('warehouse:/api/apples/sub/12334/4532/fdgdg/4/dsfsf', 'subyo');
 
 				answer.then(function(result){
 					result.should.equal('subyo world');

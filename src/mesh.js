@@ -30,6 +30,13 @@ function factory(options){
 
 	an abstraction for either a multiplex socket (dealer)
 	or a failover socket - always one of a few active
+
+	options:
+
+		wire
+		router
+		route
+		mode
 	
 */
 function Mesh(options){
@@ -68,6 +75,11 @@ function Mesh(options){
 
 util.inherits(Mesh, EventEmitter);
 
+/*
+
+	A worker has arrived
+	
+*/
 Mesh.prototype.addworker = function(worker){
 
 	this.available[worker.id] = worker;
@@ -85,6 +97,11 @@ Mesh.prototype.addworker = function(worker){
 	}
 }
 
+/*
+
+	a worker has died remove the connection
+	
+*/
 Mesh.prototype.removeworker = function(worker){
 
 	delete(this.available[worker.id]);

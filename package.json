@@ -1,7 +1,7 @@
 {
   "name": "telegraft",
-  "version": "0.0.1",
-  "description": "RPC and PUB/SUB mesh network",
+  "version": "0.0.4",
+  "description": "node.js ZEROMQ mesh network",
   "main": "index.js",
   "scripts": {
     "test": "grunt test"

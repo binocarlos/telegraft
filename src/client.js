@@ -83,11 +83,16 @@ HQClient.prototype.initializestate = function(){
 	this registers the server with HQ and returns a wire
 	
 */
-HQClient.prototype.rpcserver = function(route, worker){
+HQClient.prototype.rpcserver = function(worker){
+
+	var self = this;
 	var server = Device.rpcserver('bind');
 	server.plugin(worker.address);
 
-	this.register_service(route, worker);
+	server.bind = function(useroute){
+		self.register_service(useroute, worker);	
+		return this;
+	}
 
 	return server;
 }
