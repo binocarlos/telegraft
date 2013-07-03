@@ -106,8 +106,8 @@ var proxy = graft.rpcproxy();
 	args are strings
 	
 */
-var time = proxy.send('/api/time', '{arg:838}'');
-var ping = proxy.send('/api/ping', '{arg:10}'');
+var time = proxy.send('/api/time', '{arg:838}');
+var ping = proxy.send('/api/ping', '{arg:10}');
 
 /*
 
