@@ -14,6 +14,10 @@ Then:
 
 	npm install telegraft
 
+Note - if you still get errors installing try:
+
+	sudo apt-get build-essential
+
 ## Usage
 
 First - the HQ service that runs the network:
@@ -126,7 +130,7 @@ ping.then(function(val){
 
 ## Running Tests
 
-	grunt test
+	make test
 
 ## Licence
 MIT
