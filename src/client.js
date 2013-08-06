@@ -43,6 +43,14 @@ function HQClient(options){
 	this.client.plugin(options.server);
 	this.radio.plugin(options.radio);
 
+	this.radio.broadcast = function(route, message){
+		return self.client.send({
+			method:'broadcast',
+			route:route,
+			message:message
+		})
+	}
+
 	this.router = Router();
 
 	this.radio.subscribe('worker.arrive', function(packet, routingkey){

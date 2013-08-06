@@ -86,6 +86,18 @@ HQServer.prototype.state = function(packet, answer){
 
 /*
 
+	generic radio broadcast
+	
+*/
+HQServer.prototype.broadcast = function(packet, answer){
+	this.radio.broadcast(packet.route, packet.message);
+	answer({
+		status:'sent'
+	})
+}
+
+/*
+
 	a worker has arrived
 	
 */
