@@ -117,6 +117,10 @@ HQServer.prototype.arrive = function(packet, callback){
 		route:packet.route,
 		worker:packet.worker
 	})
+	this.emit('worker.arrive', {
+		route:packet.route,
+		worker:packet.worker
+	})
 	callback(null, {
 		result:true
 	})
@@ -129,6 +133,9 @@ HQServer.prototype.arrive = function(packet, callback){
 */
 HQServer.prototype.heartbeat = function(packet, callback){
 	this.router.refresh(packet.worker);
+	this.emit('worker.heartbeat', {
+		worker:packet.worker
+	})
 	callback(null, {
 		result:true
 	})
@@ -143,6 +150,10 @@ HQServer.prototype.heartbeat = function(packet, callback){
 HQServer.prototype.leave = function(packet, callback){
 	this.router.remove(packet.route, packet.worker);
 	this.radio.broadcast('worker.leave', {
+		route:packet.route,
+		worker:packet.worker
+	})
+	this.emit('worker.leave', {
 		route:packet.route,
 		worker:packet.worker
 	})
