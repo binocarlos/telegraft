@@ -96,12 +96,13 @@ HQClient.prototype.rpcserver = function(worker){
 	var self = this;
 	var server = Device.rpcserver('bind');
 	server.plugin(worker.address);
+	server.heartbeat_id = setInterval(function(){
+		self.send_heartbeat(worker);
+	}, 1000)
 
 	server.bind = function(useroute){
 		self.register_service(useroute, worker);
-		server.heartbeat_id = setInterval(function(){
-			self.heartbeat_service(worker);
-		}, 1000)
+		
 		return this;
 	}
 
@@ -261,7 +262,7 @@ HQClient.prototype.register_service = function(route, worker){
 
 }
 
-HQClient.prototype.heartbeat_service = function(worker){
+HQClient.prototype.send_heartbeat = function(worker){
 	var self = this;
 	this.client.send({
 		method:'heartbeat',
