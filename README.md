@@ -53,8 +53,10 @@ var timeserver = graft.rpcserver({
 	address:'tcp://127.0.0.1:56493'
 })
 
-timeserver.on('request', function (req, answer){
-	answer(new Date().getTime());
+timeserver.on('request', function (req, reply){
+
+	// reply is a standard node callback function - error, result
+	reply(null, new Date().getTime());
 })
 
 timeserver.bind('/api/time');
@@ -80,7 +82,7 @@ var pingserver = graft.rpcserver({
 })
 
 pingserver.on('request', function (req, answer){
-	answer('hello world');
+	answer(null, 'hello world');
 })
 
 timeserver.bind('/api/ping');
@@ -110,21 +112,13 @@ var proxy = graft.rpcproxy();
 	args are strings
 	
 */
-var time = proxy.send('/api/time', '{arg:838}');
-var ping = proxy.send('/api/ping', '{arg:10}');
-
-/*
-
-	the answers are promises
-	
-*/
-time.then(function(val){
+proxy.send('/api/time', '{arg:838}', function(error, val){
 	console.log('the time is: ' + val);
-})
+});
 
-ping.then(function(val){
+proxy.send('/api/ping', '{arg:10}', function(error, val){
 	console.log('the ping says: ' + val);
-})
+});
 
 ```
 
