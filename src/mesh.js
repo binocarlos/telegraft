@@ -58,7 +58,7 @@ function Mesh(options){
 	this.connected = {};
 	this.available = {};
 
-	var initial = this.router.search(this.route);
+	var initial = this.router.search(this.route || '');
 
 	_.each(initial.workers, function(worker){
 		self.addworker(worker);

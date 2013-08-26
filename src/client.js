@@ -170,6 +170,7 @@ HQClient.prototype.rpcproxy = function(){
 
 	proxy.send = function(route, packet, callback){
 
+		
 		function usemesh(mesh){
 			mesh.send(packet, callback)
 		}
