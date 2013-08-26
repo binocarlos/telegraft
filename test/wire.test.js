@@ -134,7 +134,7 @@ describe('wire', function(){
 
 	it('Radio should get messages', function(done) {
 
-		var address = 'tcp://127.0.0.1:5678';
+		var address = 'tcp://127.0.0.1:5278';
 
 		wires.server = telegraft.wire({
 			type:'pub',

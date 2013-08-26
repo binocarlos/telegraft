@@ -47,20 +47,17 @@ describe('HQ', function(){
 		wires.server.bind('warehouse:/api');
 
 		wires.server.on('request', function(req, answer){
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.client = wires.hqclient.rpcclient('warehouse:/api');
 
 		setTimeout(function(){
-			var answer = wires.client.send('hello');
-
-			answer.then(function(value){
+			wires.client.send('hello', function(error, value){
 				value.should.equal('hello world');
 				process.nextTick(function(){
 					done();
 				})
-				
 			})
 		}, 10)
 		
@@ -103,19 +100,19 @@ describe('HQ', function(){
 		wires.server1.on('request', function(req, answer){
 			counters.server1++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.server2.on('request', function(req, answer){
 			counters.server2++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.server3.on('request', function(req, answer){
 			counters.server3++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.client = wires.hqclient.rpcclient('warehouse:/api');
@@ -124,9 +121,7 @@ describe('HQ', function(){
 
 		function runrequest(){
 			setTimeout(function(){
-				var answer = wires.client.send('hello');
-
-				answer.then(function(value){
+				wires.client.send('hello', function(error, value){
 					value.should.equal('hello world');
 					all++;
 					if(all<50){
@@ -166,7 +161,7 @@ describe('HQ', function(){
 		wires.server1 = wires.hqclient.rpcserver({
 			id:'server1',
 			protocol:'rpc',
-			address:'tcp://127.0.0.1:5668'
+			address:'tcp://127.0.0.1:5768'
 		})
 
 		wires.server1.bind('warehouse:/api/different');
@@ -174,7 +169,7 @@ describe('HQ', function(){
 		wires.server2 = wires.hqclient.rpcserver({
 			id:'server2',
 			protocol:'rpc',
-			address:'tcp://127.0.0.1:5669'
+			address:'tcp://127.0.0.1:5769'
 		})
 
 		wires.server2.bind('warehouse:/api/apples/sub');
@@ -182,7 +177,7 @@ describe('HQ', function(){
 		wires.server3 = wires.hqclient.rpcserver({
 			id:'server3',
 			protocol:'rpc',
-			address:'tcp://127.0.0.1:5667'
+			address:'tcp://127.0.0.1:5767'
 		})
 
 		wires.server3.bind('warehouse:/api/apples');
@@ -190,19 +185,19 @@ describe('HQ', function(){
 		wires.server1.on('request', function(req, answer){
 			counters.server1++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.server2.on('request', function(req, answer){
 			counters.server2++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.server3.on('request', function(req, answer){
 			counters.server3++;
 			counters.total++;
-			answer(req + ' world');
+			answer(null, req + ' world');
 		})
 
 		wires.proxy = wires.hqclient.rpcproxy();
@@ -214,27 +209,21 @@ describe('HQ', function(){
 			},
 
 			function(next){
-				var answer = wires.proxy.send('warehouse:/api/apples/12334', 'pie');
-
-				answer.then(function(result){
+				wires.proxy.send('warehouse:/api/apples/12334', 'pie', function(error, result){
 					result.should.equal('pie world');
 					next();
 				})
 			},
 
 			function(next){
-				var answer = wires.proxy.send('warehouse:/api/different/12334', 'yo');
-
-				answer.then(function(result){
+				wires.proxy.send('warehouse:/api/different/12334', 'yo', function(error, result){
 					result.should.equal('yo world');
 					next();
 				})
 			},
 
 			function(next){
-				var answer = wires.proxy.send('warehouse:/api/apples/sub/12334/4532/fdgdg/4/dsfsf', 'subyo');
-
-				answer.then(function(result){
+				wires.proxy.send('warehouse:/api/apples/sub/12334/4532/fdgdg/4/dsfsf', 'subyo', function(error, result){
 					result.should.equal('subyo world');
 					next();
 				})
@@ -249,6 +238,8 @@ describe('HQ', function(){
 
 
 	})
+
+
 
 
 })

@@ -52,7 +52,7 @@ function Mesh(options){
 	this.route = options.route;
 	this.mode = options.mode;
 
-	this.send = _.bind(this.wire.send, this.wire);
+	this.wiresend = _.bind(this.wire.send, this.wire);
 	this.wire.setup();
 
 	this.connected = {};
@@ -66,14 +66,40 @@ function Mesh(options){
 
 	this.router.on('added.' + this.route, function(route, worker){
 		self.addworker(worker);
+		self.emit('added', route, worker);
 	})
 
 	this.router.on('removed.' + this.route, function(route, worker){
 		self.removeworker(worker);
+		self.emit('removed', route, worker);
 	})
 }
 
 util.inherits(Mesh, EventEmitter);
+
+/*
+
+	we keep track of each request so we can resend it 
+	
+*/
+Mesh.prototype.send = function(packet, callback){
+	var self = this;
+	var completed = false;
+
+	var timeoutid = setTimeout(function(){
+		if(!completed){
+			self.emit('timeout', packet, callback);
+		}
+	}, 3000)
+
+	this.wire.send(packet, function(error, result){
+		completed = true;
+		clearTimeout(timeoutid);
+		callback(error, result);
+	});
+
+
+}
 
 /*
 
@@ -84,10 +110,20 @@ Mesh.prototype.addworker = function(worker){
 
 	this.available[worker.id] = worker;
 
+	/*
+	
+		combine means we are connecting to multiple endpoints
+		
+	*/
 	if(this.mode=='combine'){
 		this.connected[worker.id] = worker;
 		this.wire.plugin(worker.address);	
 	}
+	/*
+	
+		otherwise we are conneting to one at a time from a pool
+		
+	*/
 	else{
 		var counter = _.keys(this.connected);
 		if(counter<=0){
@@ -107,6 +143,11 @@ Mesh.prototype.removeworker = function(worker){
 	delete(this.available[worker.id]);
 	delete(this.connected[worker.id]);
 
+	/*
+	
+		if we are in single mode then we must
+		
+	*/
 	if(this.mode=='singular'){
 		var counter = _.keys(this.connected);
 		if(counter<=0 && _.keys(this.available).length>0){
@@ -114,6 +155,9 @@ Mesh.prototype.removeworker = function(worker){
 			this.wire.plugin(newworker.address);
 			this.connected[newworker.id] = newworker;
 		}
+	}
+	else{
+		this.wire.disconnect(worker.address);
 	}
 
 	if(_.keys(this.available).length<=0){

@@ -122,11 +122,20 @@ Wire.prototype.plugin = function(address){
 	}
 
 	this.setup();
-
+	this.emit('plugin', address);
 	var pluginmethod = direction_methods[this.direction];
 	this._socket[pluginmethod].apply(this._socket, [address]);
-
+	
 	return this;
+}
+
+/*
+
+	remove the address from a combined set of endpoints
+	
+*/
+Wire.prototype.disconnect = function(address){
+	this._socket.disconnect(address);
 }
 
 Wire.prototype.unplug = function(){
@@ -134,6 +143,7 @@ Wire.prototype.unplug = function(){
 		return;
 	}
 
+	this.emit('unplug');
 	this._socket.close();
 	this._socket = null;
 	return this;

@@ -21,7 +21,6 @@ var util = require('util');
 var Device = require('./device');
 var Router = require('./router');
 var Mesh = require('./mesh');
-var Q = require('q');
 var _ = require('lodash');
 
 module.exports = factory;
@@ -43,11 +42,13 @@ function HQClient(options){
 	this.client.plugin(options.server);
 	this.radio.plugin(options.radio);
 
-	this.radio.broadcast = function(route, message){
-		return self.client.send({
+	this.radio.broadcast = function(route, message, callback){
+		self.client.send({
 			method:'broadcast',
 			route:route,
 			message:message
+		}, function(error, result){
+			callback && callback(error, result);
 		})
 	}
 
@@ -69,16 +70,15 @@ util.inherits(HQClient, EventEmitter);
 HQClient.prototype.unplug = function(){
 	this.client.unplug();
 	this.radio.unplug();
+	this.router.unplug();
 	return this;
 }
 
 HQClient.prototype.initializestate = function(){
 	var self = this;
-	var answer = this.client.send({
+	this.client.send({
 		method:'state'
-	})
-
-	answer.then(function(packet){
+	}, function(error, packet){
 		var state = packet.result;
 		self.router.initialize(state);
 	})
@@ -98,11 +98,30 @@ HQClient.prototype.rpcserver = function(worker){
 	server.plugin(worker.address);
 
 	server.bind = function(useroute){
-		self.register_service(useroute, worker);	
+		self.register_service(useroute, worker);
+		server.heartbeat_id = setInterval(function(){
+			self.heartbeat_service(worker);
+		}, 1000)
 		return this;
 	}
 
+	server.on('unplug', function(){
+		clearInterval(server.heartbeat_id);
+	})
+
 	return server;
+}
+
+HQClient.prototype.meshwrapper = function(mesh){
+
+	/*
+	
+		a request has timeout - resend it
+		
+	*/
+	mesh.on('timeout', function(req, callback){
+		mesh.send(req, callback);
+	})
 }
 
 /*
@@ -118,8 +137,15 @@ HQClient.prototype.rpcclient = function(route){
 		wire:Device.rpcclient('connect'),
 		router:this.router,
 		route:route,
+		/*
+		
+			this means we are using the loda balacning of zeroMQ
+			
+		*/
 		mode:'combine'
 	})
+
+	this.meshwrapper(mesh);
 
 	return mesh;
 }
@@ -141,18 +167,10 @@ HQClient.prototype.rpcproxy = function(){
 
 	var proxy = function(){}
 
-	proxy.send = function(route, packet){
-
-		var deferred = Q.defer();
+	proxy.send = function(route, packet, callback){
 
 		function usemesh(mesh){
-			mesh
-				.send(packet)
-				.then(function(packet){
-					deferred.resolve(packet);
-				}, function(reason){
-					deferred.reject(reason);
-				})
+			mesh.send(packet, callback)
 		}
 
 		process.nextTick(function(){
@@ -170,7 +188,7 @@ HQClient.prototype.rpcproxy = function(){
 				
 			*/
 			if(result.workers.length<=0){
-				deferred.reject(new Error("no workers found"));
+				callback("no workers found");
 			}
 			else{
 				var matchedroute = result.matchedroute;
@@ -198,6 +216,9 @@ HQClient.prototype.rpcproxy = function(){
 						mode:'combine'
 					})
 
+					self.meshwrapper(mesh);
+
+
 					meshcache[matchedroute] = mesh;
 
 					mesh.on('empty', function(){
@@ -210,8 +231,6 @@ HQClient.prototype.rpcproxy = function(){
 				}
 			}
 		})
-
-		return deferred.promise;
 	}
 
 	proxy.unplug = function(){
@@ -232,14 +251,22 @@ HQClient.prototype.rpcproxy = function(){
 */
 HQClient.prototype.register_service = function(route, worker){
 	var self = this;
-	var answer = this.client.send({
+	this.client.send({
 		method:'arrive',
 		route:route,
 		worker:worker
+	}, function(error, result){
+
 	})
 
-	answer.then(function(packet){
-		var result = packet.result;
-		// worker has been added
+}
+
+HQClient.prototype.heartbeat_service = function(worker){
+	var self = this;
+	this.client.send({
+		method:'heartbeat',
+		worker:worker
+	}, function(error, result){
+
 	})
 }

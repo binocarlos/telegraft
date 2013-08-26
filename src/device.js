@@ -18,7 +18,6 @@
 var _ = require('lodash');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
-var Q = require('q');
 var tools = require('./tools');
 var Wire = require('./wire');
 var EventEmitter2 = require('eventemitter2').EventEmitter2;
@@ -35,8 +34,14 @@ module.exports = {
 
 		wire.on('message', function(frames){
 			var packet = JSON.parse(frames[frames.length-1].toString());
-			wire.emit('request', packet, function(answer){
-				frames[frames.length-1] = JSON.stringify(answer);
+			wire.emit('request', packet, function(error, answer){
+				if(error){
+					frames[frames.length-1] = '_error:' + error;
+				}
+				else{
+					frames[frames.length-1] = JSON.stringify(answer);	
+				}
+				
 				wire.send(frames);
 			})
 		})
@@ -52,36 +57,43 @@ module.exports = {
 		})
 
 		var _send = wire.send;
-		var promises = {};
+		var callbacks = {};
 
 		wire.on('message', function(frames){
 
 			var requestid = frames[0].toString();
-			var packet = JSON.parse(frames[1].toString());
 
-			var promise = promises[requestid];
+			var callback = callbacks[requestid];
 
-			if(promise){
-				promise.resolve(packet);
-				delete(promises[requestid]);
+			if(callback){
+				var payload = frames[1].toString();
+
+				if(payload.indexOf('_error:')==0){
+					payload = payload.substr('_error:'.length);
+					callback(payload);
+				}
+				else{
+					var packet = JSON.parse(payload);
+					callback(null, packet);
+				}
+				
+				delete(callbacks[requestid]);
 			}
 		})
 
 		wire.send = function(){
 
 			var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
+			var callback = frames.pop();
 
 			var requestid = tools.littleid();
-			var deferred = Q.defer();
 
-			promises[requestid] = deferred;
+			callbacks[requestid] = callback;
 
 			frames.unshift(requestid);
 			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
 
 			_send.apply(wire, [frames]);
-
-			return deferred.promise;
 		}
 
 		return wire;

@@ -24,14 +24,16 @@ var Device = require('./device');
 
 module.exports = factory;
 
-function factory(){
-	return new Router();
+function factory(hqmode){
+	return new Router(hqmode);
 }
 
-function Router(){
+function Router(hqmode){
 	EventEmitter.call(this);
 
 	var self = this;
+
+	this.id = tools.littleid();
 
 	/*
 	
@@ -40,18 +42,68 @@ function Router(){
 		reset upon every addition and removal
 		
 	*/
+	this.hqmode = hqmode;
 	this.cache = {};
 
 	this.state = {
+		intervals:[],
+		lastseen:{},
 		workers:{},
 		routes:{}
 	};
+
+	/*
+	
+		in HQ mode we are looking after the whole network with heartbeats
+		
+	*/
+	if(this.hqmode){
+
+		this.on('added', function(route, worker){
+
+			/*
+			
+				if this is the first time we have seen the worker then setup
+				an interval to watch for it's heartbeat timeout
+			*/
+
+			if(!self.state.lastseen[worker.id]){
+				var intervalid = setInterval(function(){
+
+					var lastseen = self.state.lastseen[worker.id];
+					var nowtime = new Date().getTime();
+					var gap = nowtime - lastseen;
+
+					if(gap>3000){
+						clearInterval(self.state.intervals[worker.id + ':' + route]);
+						self.removeworker(worker);
+					}
+				}, 1000)
+
+				if(self.state.intervals[worker.id + ':' + route]){
+					clearInterval(self.state.intervals[worker.id + ':' + route]);
+				}
+
+				self.state.intervals[worker.id + ':' + route] = intervalid;
+			}	
+		})
+	}
+	
 }
 
 util.inherits(Router, EventEmitter);
 
 Router.prototype.addroute = function(route, worker){
 	var workerids = this.state.routes[route] || {};
+	/*
+	
+		we already have this route
+		
+	*/
+	
+	if(workerids[worker.id]){
+		return this;
+	}
 	workerids[worker.id] = new Date().getTime();
 	var routes = worker.routes || {};
 	routes[route] = true;
@@ -71,6 +123,15 @@ Router.prototype.removeroute = function(route, worker){
 	this.state.routes[route] = workerids;
 	this.emit('removed', route, worker);
 	this.emit('removed.' + route, route, worker);
+	return this;
+}
+
+Router.prototype.removeworker = function(worker){
+	var worker = this.state.workers[worker.id];
+	for(var route in worker.routes){
+		this.removeroute(route, worker);
+	}
+	delete(this.state.workers[worker.id]);
 	return this;
 }
 
@@ -118,6 +179,23 @@ Router.prototype.search = function(route){
 		return mapids(workerids);
 	}
 
+	/*
+	
+		we did not find the route right away - work backwards splitting by '/'
+
+		this means that:
+
+			/my/db/subroute/123
+
+		will match:
+
+			/my/db/subroute
+
+		and not match:
+
+			/my/db
+			
+	*/
 	var parts = route.split('/');
 	while(!workerids && parts.length>0){
 		parts.pop();
@@ -129,15 +207,48 @@ Router.prototype.search = function(route){
 	return mapids(workerids, finalroute);
 }
 
+Router.prototype.unplug = function(){
+	for(var intervalid in this.state.intervals){
+		clearInterval(intervalid);
+	}
+	this.cache = {};
+
+	this.state = {
+		intervals:{},
+		lastseen:{},
+		workers:{},
+		routes:{}
+	};
+}
+
 Router.prototype.add = function(route, worker){
+	var self = this;
 	this.cache = {};
 	this.state.workers[worker.id] = worker;
 	this.addroute(route, worker);
+	this.state.lastseen[worker.id] = new Date().getTime();
+
 	return this;
 }
 
 Router.prototype.remove = function(route, worker){
+	if(arguments.length==1){
+		worker = route;
+		route = null;		
+	}
+
 	this.cache = {};
-	this.removeroute(route, worker);
+
+	if(route){
+		this.removeroute(route, worker);	
+	}
+	else{
+		this.removeworker(worker);
+	}
+	
 	return this;
+}
+
+Router.prototype.refresh = function(worker){
+	this.state.lastseen[worker.id] = new Date().getTime();
 }

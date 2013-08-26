@@ -35,22 +35,19 @@ describe('device', function(){
 		wires.server = telegraft.device.rpcserver('bind');
 		wires.client = telegraft.device.rpcclient('connect');
 
-		wires.server.on('request', function(req, answer){
-			answer(req + ' world');
+		wires.server.on('request', function(req, reply){
+			reply(null, req + ' world');
 		})
 
 		wires.server.plugin(address);
 		wires.client.plugin(address);
 
-		var answer = wires.client.send('hello');
-
-		answer.then(function(value){
+		wires.client.send('hello', function(error, value){
 			value.should.equal('hello world');
 			process.nextTick(function(){
 				done();
 			})
-			
-		})
+		});
 
 	})
 
@@ -61,8 +58,8 @@ describe('device', function(){
 		wires.server = telegraft.device.rpcserver('bind');
 		wires.client = telegraft.device.rpcclient('connect');
 
-		wires.server.on('request', function(req, answer){
-			answer({
+		wires.server.on('request', function(req, reply){
+			reply(null, {
 				testkey:req.testkey + 10
 			});
 		})
@@ -70,11 +67,9 @@ describe('device', function(){
 		wires.server.plugin(address);
 		wires.client.plugin(address);
 
-		var answer = wires.client.send({
+		wires.client.send({
 			testkey:378
-		})
-
-		answer.then(function(value){
+		}, function(error, value){
 			value.testkey.should.equal(388);
 			done();
 		})

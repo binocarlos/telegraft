@@ -32,7 +32,7 @@ function HQServer(options){
 
 	var self = this;
 
-	this.router = Router();
+	this.router = Router(true);
 
 	this.server = Device.rpcserver('bind');
 	this.radio = Device.radioserver('bind');
@@ -41,6 +41,18 @@ function HQServer(options){
 		
 	this.server.plugin(options.server);
 	this.radio.plugin(options.radio);
+
+	/*
+	
+		this is an auto removal because the heartbeating has stopped
+		
+	*/
+	this.router.on('removed', function(route, worker){
+		self.radio.broadcast('worker.leave', {
+			route:route,
+			worker:worker
+		})
+	})
 }
 
 util.inherits(HQServer, EventEmitter);
@@ -51,7 +63,7 @@ HQServer.prototype.unplug = function(){
 	return this;
 }
 
-HQServer.prototype.handle = function(packet, answer){
+HQServer.prototype.handle = function(packet, callback){
 
 	/*
 	
@@ -62,12 +74,10 @@ HQServer.prototype.handle = function(packet, answer){
 	var method = packet.method;
 
 	if(this[method]){
-		this[method].apply(this, [packet, answer]);
+		this[method].apply(this, [packet, callback]);
 	}
 	else{
-		answer({
-			error:method + ' not found'
-		})
+		callback(method + ' not found');
 	}
 
 	return this;
@@ -78,8 +88,8 @@ HQServer.prototype.handle = function(packet, answer){
 	get a full map of all workers
 	
 */
-HQServer.prototype.state = function(packet, answer){
-	answer({
+HQServer.prototype.state = function(packet, callback){
+	callback(null, {
 		result:this.state
 	})
 }
@@ -89,9 +99,9 @@ HQServer.prototype.state = function(packet, answer){
 	generic radio broadcast
 	
 */
-HQServer.prototype.broadcast = function(packet, answer){
+HQServer.prototype.broadcast = function(packet, callback){
 	this.radio.broadcast(packet.route, packet.message);
-	answer({
+	callback(null, {
 		status:'sent'
 	})
 }
@@ -101,29 +111,42 @@ HQServer.prototype.broadcast = function(packet, answer){
 	a worker has arrived
 	
 */
-HQServer.prototype.arrive = function(packet, answer){
+HQServer.prototype.arrive = function(packet, callback){
 	this.router.add(packet.route, packet.worker);
 	this.radio.broadcast('worker.arrive', {
 		route:packet.route,
 		worker:packet.worker
 	})
-	answer({
+	callback(null, {
 		result:true
 	})
 }
 
 /*
 
+	a worker has heartbeated
+	
+*/
+HQServer.prototype.heartbeat = function(packet, callback){
+	this.router.refresh(packet.worker);
+	callback(null, {
+		result:true
+	})
+}
+
+
+/*
+
 	a worker has left
 	
 */
-HQServer.prototype.leave = function(packet, answer){
+HQServer.prototype.leave = function(packet, callback){
 	this.router.remove(packet.route, packet.worker);
 	this.radio.broadcast('worker.leave', {
 		route:packet.route,
 		worker:packet.worker
 	})
-	answer({
+	callback(null, {
 		result:true
 	})
 }
