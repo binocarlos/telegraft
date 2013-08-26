@@ -19,9 +19,8 @@
   "dependencies": {
     "async": "~0.2.7",
     "lodash": "~1.2.0",
-    "q": "~0.9.3",
-    "deck": "0.0.4",
-    "zmq": "2.4.0",
+    "deck": "~0.0.4",
+    "zmq": "~2.4.0",
     "eventemitter2": "~0.4.12"
   },
   "devDependencies": {
