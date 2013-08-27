@@ -93,47 +93,6 @@ function Router(hqmode){
 
 util.inherits(Router, EventEmitter);
 
-Router.prototype.addroute = function(route, worker){
-	var workerids = this.state.routes[route] || {};
-	/*
-	
-		we already have this route
-		
-	*/
-	
-	if(workerids[worker.id]){
-		return this;
-	}
-	workerids[worker.id] = new Date().getTime();
-	var routes = worker.routes || {};
-	routes[route] = true;
-	worker.routes = routes;
-	this.state.routes[route] = workerids;
-	this.emit('added', route, worker);
-	this.emit('added.' + route, route, worker);
-	return this;
-}
-
-Router.prototype.removeroute = function(route, worker){
-	var workerids = this.state.routes[route] || {};
-	delete(workerids[worker.id]);
-	var routes = worker.routes || {};
-	delete(routes[route]);
-	worker.routes = routes;
-	this.state.routes[route] = workerids;
-	this.emit('removed', route, worker);
-	this.emit('removed.' + route, route, worker);
-	return this;
-}
-
-Router.prototype.removeworker = function(worker){
-	var worker = this.state.workers[worker.id];
-	for(var route in worker.routes){
-		this.removeroute(route, worker);
-	}
-	delete(this.state.workers[worker.id]);
-	return this;
-}
 
 Router.prototype.initialize = function(state){
 
@@ -176,7 +135,7 @@ Router.prototype.search = function(route){
 	}
 
 	if(workerids){
-		return mapids(workerids);
+		return mapids(workerids, route);
 	}
 
 	/*
@@ -224,7 +183,15 @@ Router.prototype.unplug = function(){
 Router.prototype.add = function(route, worker){
 	var self = this;
 	this.cache = {};
-	this.state.workers[worker.id] = worker;
+
+	if(this.state.workers[worker.id]){
+		var masterworker = this.state.workers[worker.id];
+		masterworker.routes = _.extend(masterworker.routes, worker.routes || {});
+	}
+	else{
+		this.state.workers[worker.id] = worker;	
+	}
+	
 	this.addroute(route, worker);
 	this.state.lastseen[worker.id] = new Date().getTime();
 
@@ -251,4 +218,48 @@ Router.prototype.remove = function(route, worker){
 
 Router.prototype.refresh = function(worker){
 	this.state.lastseen[worker.id] = new Date().getTime();
+}
+
+
+Router.prototype.addroute = function(route, worker){
+	var workerids = this.state.routes[route] || {};
+	
+	/*
+	
+		we already have this route + worker id
+		
+	*/
+	
+	if(workerids[worker.id]){
+		return this;
+	}
+	workerids[worker.id] = new Date().getTime();
+	var routes = worker.routes || {};
+	routes[route] = true;
+	worker.routes = routes;
+	this.state.routes[route] = workerids;
+	this.emit('added', route, worker);
+	this.emit('added.' + route, route, worker);
+	return this;
+}
+
+Router.prototype.removeroute = function(route, worker){
+	var workerids = this.state.routes[route] || {};
+	delete(workerids[worker.id]);
+	var routes = worker.routes || {};
+	delete(routes[route]);
+	worker.routes = routes;
+	this.state.routes[route] = workerids;
+	this.emit('removed', route, worker);
+	this.emit('removed.' + route, route, worker);
+	return this;
+}
+
+Router.prototype.removeworker = function(worker){
+	var worker = this.state.workers[worker.id];
+	for(var route in worker.routes){
+		this.removeroute(route, worker);
+	}
+	delete(this.state.workers[worker.id]);
+	return this;
 }

@@ -161,9 +161,8 @@ HQClient.prototype.rpcproxy = function(){
 
 	proxy.send = function(route, packet, callback){
 
-		
 		function usemesh(mesh){
-			mesh.send(packet, callback)
+			mesh.send(packet, callback);
 		}
 
 		process.nextTick(function(){
@@ -210,7 +209,15 @@ HQClient.prototype.rpcproxy = function(){
 					})
 
 					mesh.on('timeout', function(req, callback){
-						proxy.send(route, req, callback);
+						if(req._attempts && req._attempts>=2){
+							callback('this request timed out');
+						}
+						else{
+							var attempts = req._attempts || 0;
+							req._attempts = attempts+1;
+							proxy.send(route, req, callback);
+						}
+						
 					})
 
 
