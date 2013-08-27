@@ -30,7 +30,11 @@ describe('radio', function(){
 			wire.unplug();
 		})
 		wires = {};
-		unplugged();
+
+		setTimeout(function(){
+			unplugged();	
+		}, 100)
+		
 	})
 
 	it('should broadcast and receive', function(done){

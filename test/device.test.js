@@ -25,9 +25,12 @@ describe('device', function(){
 			wire.unplug();
 		})
 		wires = {};
-		unplugged();
-	})
 
+		setTimeout(function(){
+			unplugged();	
+		}, 100)
+		
+	})
 	it('should do an RPC loop', function(done){
 
 		var address = 'tcp://127.0.0.1:5678';

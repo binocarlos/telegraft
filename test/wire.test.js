@@ -25,7 +25,11 @@ describe('wire', function(){
 			wire.unplug();
 		})
 		wires = {};
-		unplugged();
+
+		setTimeout(function(){
+			unplugged();	
+		}, 100)
+		
 	})
 
 	it('should construct from JSON data', function(){

@@ -64,6 +64,10 @@ function Mesh(options){
 		self.addworker(worker);
 	})
 
+	this.wire.on('timeout', function(req, reply){
+		self.emit('timeout', req, reply);
+	})
+
 	this.router.on('added.' + this.route, function(route, worker){
 		self.addworker(worker);
 		self.emit('added', route, worker);
@@ -86,19 +90,7 @@ Mesh.prototype.send = function(packet, callback){
 	var self = this;
 	var completed = false;
 
-	var timeoutid = setTimeout(function(){
-		if(!completed){
-			self.emit('timeout', packet, callback);
-		}
-	}, 3000)
-
-	this.wire.send(packet, function(error, result){
-		completed = true;
-		clearTimeout(timeoutid);
-		callback(error, result);
-	});
-
-
+	this.wire.send(packet, callback);
 }
 
 /*

@@ -32,18 +32,47 @@ module.exports = {
 			type:'router'
 		})
 
+		var _send = wire.send;
+
 		wire.on('message', function(frames){
-			var packet = JSON.parse(frames[frames.length-1].toString());
-			wire.emit('request', packet, function(error, answer){
-				if(error){
-					frames[frames.length-1] = '_error:' + error;
-				}
-				else{
-					frames[frames.length-1] = JSON.stringify(answer);	
-				}
+			var requestid = frames[frames.length-2].toString();
+			var payload = frames[frames.length-1].toString();
+
+			var sent = false;
+			var ackframes = [].concat(frames);
+
+			function send_ack(){
+				ackframes[ackframes.length-1] = 'ack';
+				wire.send(ackframes);
+			}
+
+			var packet = JSON.parse(payload);
+
+			process.nextTick(function(){
+				/*
 				
-				wire.send(frames);
+					send a ack packet for this request every second
+					
+				*/
+				send_ack();
+				var intervalid = setInterval(function(){
+					send_ack();
+				}, 1000)
+
+
+
+				wire.emit('request', packet, function(error, answer){
+					clearInterval(intervalid);
+					if(error){
+						frames[frames.length-1] = '_error:' + error;
+					}
+					else{
+						frames[frames.length-1] = JSON.stringify(answer);	
+					}
+					wire.send(frames);
+				})
 			})
+			
 		})
 
 		return wire;
@@ -57,43 +86,112 @@ module.exports = {
 		})
 
 		var _send = wire.send;
-		var callbacks = {};
 
-		wire.on('message', function(frames){
+		var requests = {};
 
-			var requestid = frames[0].toString();
+		function setup_timeout(requestid){
+			var request = requests[requestid];
 
-			var callback = callbacks[requestid];
+			if(request.timeoutid){
+				clearTimeout(request.timeoutid);
+			}
+			
+			request.timeoutid = setTimeout(function(){
+				
+				/*
+				
+					if we get to here it means we have not got back an ack packet
+					and we declare that the request has timed out
 
-			if(callback){
-				var payload = frames[1].toString();
+					if the request was taking a long time but the server was still alive,
+					the ack packets would still flow
+					
+				*/
 
-				if(payload.indexOf('_error:')==0){
-					payload = payload.substr('_error:'.length);
-					callback(payload);
-				}
-				else{
-					var packet = JSON.parse(payload);
-					callback(null, packet);
+				if(requests[requestid]){
+					wire.emit('timeout', request.packet, request.callback);
 				}
 				
-				delete(callbacks[requestid]);
+			}, 2000);
+		}
+
+		/*
+		
+			the server will be acking the request every second
+			
+		*/
+		function ack_response(requestid, payload){
+			var request = requests[requestid];
+			setup_timeout(requestid);
+		}
+
+		function payload_response(requestid, payload){
+			var request = requests[requestid];
+
+			if(request.timeoutid){
+				clearTimeout(request.timeoutid);
+			}
+
+			if(payload.indexOf('_error:')==0){
+				payload = payload.substr('_error:'.length);
+				request.callback(payload);
+			}
+			else{
+				try{
+					var packet = JSON.parse(payload);
+				} catch (e){
+					console.error('There was an error parsing JSON')
+					console.error(packet);
+				}
+				request.callback(null, packet);
+			}
+
+			delete(requests[requestid]);
+		}
+
+		wire.on('message', function(frames){
+			var requestid = frames[0].toString();
+			var payload = frames[1].toString();
+
+			if(payload.indexOf('ack')==0){
+				ack_response(requestid, payload);
+			}
+			else{
+				payload_response(requestid, payload);
 			}
 		})
 
 		wire.send = function(){
 
 			var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
-			var callback = frames.pop();
+
+			var callback = null;
+
+			if(typeof(frames[frames.length-1])==='function'){
+				callback = frames.pop();
+			}
+			else{
+				callback = function(){}
+			}
 
 			var requestid = tools.littleid();
+			var packet = frames[frames.length-1];
 
-			callbacks[requestid] = callback;
+			var request = {
+				requestid:requestid,
+				packet:packet,
+				callback:callback
+			}
 
+			requests[requestid] = request;
+			
 			frames.unshift(requestid);
 			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
 
 			_send.apply(wire, [frames]);
+			setup_timeout(requestid);
+
+			return requestid;
 		}
 
 		return wire;

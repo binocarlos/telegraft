@@ -74,7 +74,7 @@ function Router(hqmode){
 					var nowtime = new Date().getTime();
 					var gap = nowtime - lastseen;
 
-					if(gap>3000){
+					if(gap>2000){
 						clearInterval(self.state.intervals[worker.id + ':' + route]);
 						self.removeworker(worker);
 					}

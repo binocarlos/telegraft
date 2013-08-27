@@ -110,6 +110,9 @@ Wire.prototype.send = function(frames){
 		throw new Error('wire is not plugged in yet');
 	}
 
+	if(!this._socket){
+		return;
+	}
 	this._socket.send(frames);
 	return this;
 }

@@ -30,7 +30,11 @@ describe('HQ', function(){
 			wire.unplug();
 		})
 		wires = {};
-		unplugged();
+
+		setTimeout(function(){
+			unplugged();	
+		}, 100)
+		
 	})
 
 	it('should auto-mount RPC servers and clients', function(done){

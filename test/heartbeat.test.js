@@ -30,12 +30,16 @@ describe('HQ', function(){
 			wire.unplug();
 		})
 		wires = {};
-		unplugged();
+
+		setTimeout(function(){
+			unplugged();	
+		}, 100)
+		
 	})
 
-	it('should detect the heartbeat has stopped and remove the server', function(done){
+	it('should detect the heartbeat has stopped and remove the server but ensure the request is delivered eventually', function(done){
 
-		this.timeout(10000);
+		this.timeout(15000);
 
 		wires.hqserver = telegraft.server(endpoints);
 		wires.hqclient = telegraft.client(endpoints);
@@ -91,7 +95,7 @@ describe('HQ', function(){
 				die after 10 requests
 				*/	
 			
-			if(map.hit2>10){
+			if(map.hit2>=10){
 				wires.server2.unplug();
 			}
 			else{
@@ -113,14 +117,31 @@ describe('HQ', function(){
 		}
 
 		var fns = [];
-		for(var i=0; i<100; i++){
+		for(var i=0; i<50; i++){
 			fns.push(function(next){
 				send_req(next);
 			})
 		}
 
 		setTimeout(function(){
-			async.series(fns, function(){
+
+			/*
+			
+				lets do 2 different batches of parallel requests to really screw it over
+				
+			*/
+			async.parallel([
+				function(next){
+					async.series(fns, next);
+				},
+
+				function(next){
+					async.series(fns, next);
+				}
+
+			], function(){
+				map.hit1.should.equal(91);
+				map.hit2.should.equal(10);
 				requesthit.should.equal(100);
 				removedhit.should.equal(true);
 				done();

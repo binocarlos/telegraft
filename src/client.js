@@ -113,17 +113,6 @@ HQClient.prototype.rpcserver = function(worker){
 	return server;
 }
 
-HQClient.prototype.meshwrapper = function(mesh){
-
-	/*
-	
-		a request has timeout - resend it
-		
-	*/
-	mesh.on('timeout', function(req, callback){
-		mesh.send(req, callback);
-	})
-}
 
 /*
 
@@ -146,8 +135,10 @@ HQClient.prototype.rpcclient = function(route){
 		mode:'combine'
 	})
 
-	this.meshwrapper(mesh);
-
+	mesh.on('timeout', function(req, callback){
+		mesh.send(req, callback);
+	})
+	
 	return mesh;
 }
 
@@ -218,7 +209,9 @@ HQClient.prototype.rpcproxy = function(){
 						mode:'combine'
 					})
 
-					self.meshwrapper(mesh);
+					mesh.on('timeout', function(req, callback){
+						proxy.send(route, req, callback);
+					})
 
 
 					meshcache[matchedroute] = mesh;
