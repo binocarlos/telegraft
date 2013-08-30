@@ -10,7 +10,7 @@ describe('HQ', function(){
 	
 		clear up the wires after each test
 		
-	*/
+
 
 	var endpoints = {
 		server:'tcp://127.0.0.1:5678',
@@ -90,11 +90,7 @@ describe('HQ', function(){
 			req.hello.should.equal('world');
 			map.hit2++;
 			
-			/*
-			
-				die after 10 requests
-				*/	
-			
+
 			if(map.hit2>=10){
 				wires.server2.unplug();
 			}
@@ -125,11 +121,6 @@ describe('HQ', function(){
 
 		setTimeout(function(){
 
-			/*
-			
-				lets do 2 different batches of parallel requests to really screw it over
-				
-			*/
 			async.parallel([
 				function(next){
 					async.series(fns, next);
@@ -151,6 +142,6 @@ describe('HQ', function(){
 
 
 	})
-
+	*/
 
 })

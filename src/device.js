@@ -64,46 +64,12 @@ module.exports = {
 
 		var _send = wire.send;
 
-		var requests = {};
+		var callbacks = {};
 
 
 		/*
 		
-			IN
-			
-		*/
-		wire.on('message', function(frames){
-			var requestid = frames[0].toString();
-			var payload = frames[1].toString();
-
-			var request = requests[requestid];
-
-			if(!request){
-				console.log('-------------------------------------------');
-				console.log('NO REQUEST FOUND: ' + requestid);
-				return;
-			}
-
-			delete(requests[requestid]);
-			
-			if(payload.indexOf('_error:')==0){
-				payload = payload.substr('_error:'.length);
-				request.callback(payload);
-			}
-			else{
-				try{
-					var packet = JSON.parse(payload);
-				} catch (e){
-					console.error('There was an error parsing JSON')
-					console.error(packet);
-				}
-				request.callback(null, packet);
-			}
-		})
-
-		/*
-		
-			OUT
+			SEND
 			
 		*/
 		wire.send = function(){
@@ -122,29 +88,49 @@ module.exports = {
 			var requestid = tools.littleid();
 			var packet = frames[frames.length-1];
 
-			var request = {
-				requestid:requestid,
-				packet:packet,
-				callback:callback
-			}
-
-			requests[requestid] = request;
+			callbacks[requestid] = callback;
 
 			frames.unshift(requestid);
 			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
 
 			_send.apply(wire, [frames]);
 
-			setTimeout(function(){
-				if(!requests[requestid]){
-					return;
-				}
-				delete(requests[requestid]);
-				self.emit('timeout', packet, callback);
-			}, 10000)
-
 			return requestid;
 		}
+
+
+		/*
+		
+			RECEIVE
+			
+		*/
+		wire.on('message', function(frames){
+			var requestid = frames[0].toString();
+			var payload = frames[1].toString();
+
+			var callback = callbacks[requestid];
+
+			if(!callback){
+				return;
+			}
+			
+			if(payload.indexOf('_error:')==0){
+				payload = payload.substr('_error:'.length);
+				callback(payload);
+			}
+			else{
+				try{
+					var packet = JSON.parse(payload);
+				} catch (e){
+					console.error('There was an error parsing JSON')
+					console.error(packet);
+				}
+				callback(null, packet);
+			}
+
+			delete(callbacks[requestid]);
+		})
+
 
 		return wire;
 	},

@@ -63,7 +63,7 @@ describe('HQ', function(){
 					done();
 				})
 			})
-		}, 10)
+		}, 100)
 		
 
 	})
