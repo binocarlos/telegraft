@@ -66,7 +66,15 @@ module.exports = {
 
 		var requests = {};
 
-		function payload_response(requestid, payload){
+
+		/*
+		
+			IN
+			
+		*/
+		wire.on('message', function(frames){
+			var requestid = frames[0].toString();
+			var payload = frames[1].toString();
 
 			var request = requests[requestid];
 
@@ -75,10 +83,9 @@ module.exports = {
 				console.log('NO REQUEST FOUND: ' + requestid);
 				return;
 			}
-			if(request.timeout){
-				clearTimeout(request.timeout);
-			}
 
+			delete(requests[requestid]);
+			
 			if(payload.indexOf('_error:')==0){
 				payload = payload.substr('_error:'.length);
 				request.callback(payload);
@@ -92,17 +99,13 @@ module.exports = {
 				}
 				request.callback(null, packet);
 			}
-
-			delete(requests[requestid]);
-		}
-
-		wire.on('message', function(frames){
-			var requestid = frames[0].toString();
-			var payload = frames[1].toString();
-
-			payload_response(requestid, payload);
 		})
 
+		/*
+		
+			OUT
+			
+		*/
 		wire.send = function(){
 			var self = this;
 			var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
@@ -122,11 +125,7 @@ module.exports = {
 			var request = {
 				requestid:requestid,
 				packet:packet,
-				callback:callback,
-				timeout:setTimeout(function(){
-					delete(requests[requestid]);
-					self.emit('timeout', packet, callback);
-				}, 1000)
+				callback:callback
 			}
 
 			requests[requestid] = request;
@@ -135,6 +134,14 @@ module.exports = {
 			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
 
 			_send.apply(wire, [frames]);
+
+			setTimeout(function(){
+				if(!requests[requestid]){
+					return;
+				}
+				delete(requests[requestid]);
+				self.emit('timeout', packet, callback);
+			}, 3000)
 
 			return requestid;
 		}
