@@ -38,41 +38,18 @@ module.exports = {
 			var requestid = frames[frames.length-2].toString();
 			var payload = frames[frames.length-1].toString();
 
-			var sent = false;
-			var ackframes = [].concat(frames);
-
-			function send_ack(){
-				ackframes[ackframes.length-1] = 'ack';
-				wire.send(ackframes);
-			}
-
 			var packet = JSON.parse(payload);
 
-			process.nextTick(function(){
-				/*
-				
-					send a ack packet for this request every second
-					
-				*/
-				send_ack();
-				var intervalid = setInterval(function(){
-					send_ack();
-				}, 1000)
-
-
-
-				wire.emit('request', packet, function(error, answer){
-					clearInterval(intervalid);
-					if(error){
-						frames[frames.length-1] = '_error:' + error;
-					}
-					else{
-						frames[frames.length-1] = JSON.stringify(answer);	
-					}
-					wire.send(frames);
-				})
+			wire.emit('request', packet, function(error, answer){
+				if(error){
+					frames[frames.length-1] = '_error:' + error;
+				}
+				else{
+					frames[frames.length-1] = JSON.stringify(answer);	
+				}
+				wire.send(frames);
 			})
-			
+
 		})
 
 		return wire;
@@ -89,47 +66,17 @@ module.exports = {
 
 		var requests = {};
 
-		function setup_timeout(requestid){
-			var request = requests[requestid];
-
-			if(request.timeoutid){
-				clearTimeout(request.timeoutid);
-			}
-			
-			request.timeoutid = setTimeout(function(){
-				
-				/*
-				
-					if we get to here it means we have not got back an ack packet
-					and we declare that the request has timed out
-
-					if the request was taking a long time but the server was still alive,
-					the ack packets would still flow
-					
-				*/
-
-				if(requests[requestid]){
-					wire.emit('timeout', request.packet, request.callback);
-				}
-				
-			}, 2000);
-		}
-
-		/*
-		
-			the server will be acking the request every second
-			
-		*/
-		function ack_response(requestid, payload){
-			var request = requests[requestid];
-			setup_timeout(requestid);
-		}
-
 		function payload_response(requestid, payload){
+
 			var request = requests[requestid];
 
-			if(request.timeoutid){
-				clearTimeout(request.timeoutid);
+			if(!request){
+				console.log('-------------------------------------------');
+				console.log('NO REQUEST FOUND: ' + requestid);
+				return;
+			}
+			if(request.timeout){
+				clearTimeout(request.timeout);
 			}
 
 			if(payload.indexOf('_error:')==0){
@@ -153,16 +100,11 @@ module.exports = {
 			var requestid = frames[0].toString();
 			var payload = frames[1].toString();
 
-			if(payload.indexOf('ack')==0){
-				ack_response(requestid, payload);
-			}
-			else{
-				payload_response(requestid, payload);
-			}
+			payload_response(requestid, payload);
 		})
 
 		wire.send = function(){
-
+			var self = this;
 			var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
 
 			var callback = null;
@@ -180,16 +122,19 @@ module.exports = {
 			var request = {
 				requestid:requestid,
 				packet:packet,
-				callback:callback
+				callback:callback,
+				timeout:setTimeout(function(){
+					delete(requests[requestid]);
+					self.emit('timeout', packet, callback);
+				}, 1000)
 			}
 
 			requests[requestid] = request;
-			
+
 			frames.unshift(requestid);
 			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
 
 			_send.apply(wire, [frames]);
-			setup_timeout(requestid);
 
 			return requestid;
 		}

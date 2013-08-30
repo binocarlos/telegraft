@@ -83,7 +83,7 @@ Wire.prototype.setup = function(){
 	this._socket.highWaterMark = 10000;
 
 	this._socket.on('message', function(){
-    var frames = Array.prototype.slice.call(arguments, 0, arguments.length);    
+    var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
     self.emit('message', frames);
 	})
 	return this;
