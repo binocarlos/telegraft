@@ -121,8 +121,10 @@ HQServer.prototype.arrive = function(packet, callback){
 		route:packet.route,
 		worker:packet.worker
 	})
-	callback(null, {
-		result:true
+	process.nextTick(function(){
+		callback(null, {
+			result:true
+		})
 	})
 }
 
@@ -136,9 +138,12 @@ HQServer.prototype.heartbeat = function(packet, callback){
 	this.emit('worker.heartbeat', {
 		worker:packet.worker
 	})
-	callback(null, {
-		result:true
+	process.nextTick(function(){
+		callback(null, {
+			result:true
+		})	
 	})
+	
 }
 
 
@@ -157,7 +162,10 @@ HQServer.prototype.leave = function(packet, callback){
 		route:packet.route,
 		worker:packet.worker
 	})
-	callback(null, {
-		result:true
+	process.nextTick(function(){
+		callback(null, {
+			result:true
+		})	
 	})
+	
 }

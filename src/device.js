@@ -141,7 +141,7 @@ module.exports = {
 				}
 				delete(requests[requestid]);
 				self.emit('timeout', packet, callback);
-			}, 3000)
+			}, 10000)
 
 			return requestid;
 		}
