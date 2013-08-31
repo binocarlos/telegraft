@@ -35,19 +35,22 @@ module.exports = {
 		var _send = wire.send;
 
 		wire.on('message', function(frames){
-			var requestid = frames[frames.length-2].toString();
-			var payload = frames[frames.length-1].toString();
+
+			var socketid = frames[0];
+			var requestid = frames[1].toString();
+			var payload = frames[2].toString();
 
 			var packet = JSON.parse(payload);
 
 			wire.emit('request', packet, function(error, answer){
+				var sendpacket = answer;
 				if(error){
-					frames[frames.length-1] = '_error:' + error;
+					sendpacket = '_error:' + error;
 				}
 				else{
-					frames[frames.length-1] = JSON.stringify(answer);	
+					sendpacket = JSON.stringify(answer);	
 				}
-				wire.send(frames);
+				wire.send([socketid, requestid, sendpacket]);
 			})
 
 		})
@@ -86,14 +89,11 @@ module.exports = {
 			}
 
 			var requestid = tools.littleid();
-			var packet = frames[frames.length-1];
+			var packet = JSON.stringify(frames.pop());
 
 			callbacks[requestid] = callback;
 
-			frames.unshift(requestid);
-			frames[frames.length-1] = JSON.stringify(frames[frames.length-1]);
-
-			_send.apply(wire, [frames]);
+			_send.apply(wire, [[requestid, packet]]);
 
 			return requestid;
 		}
@@ -111,6 +111,11 @@ module.exports = {
 			var callback = callbacks[requestid];
 
 			if(!callback){
+				console.log('-------------------------------------------');
+				console.log('-------------------------------------------');
+				console.log('-------------------------------------------');
+				console.log('NO CALLBACK!');
+				console.dir(requestid);
 				return;
 			}
 			

@@ -135,10 +135,6 @@ HQClient.prototype.rpcclient = function(route){
 		mode:'combine'
 	})
 
-	mesh.on('timeout', function(req, callback){
-		mesh.send(req, callback);
-	})
-	
 	return mesh;
 }
 
@@ -207,19 +203,6 @@ HQClient.prototype.rpcproxy = function(){
 						route:matchedroute,
 						mode:'combine'
 					})
-
-					mesh.on('timeout', function(req, callback){
-						if(req._attempts && req._attempts>=2){
-							callback('this request timed out');
-						}
-						else{
-							var attempts = req._attempts || 0;
-							req._attempts = attempts+1;
-							proxy.send(route, req, callback);
-						}
-						
-					})
-
 
 					meshcache[matchedroute] = mesh;
 
