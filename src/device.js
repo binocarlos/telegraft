@@ -50,7 +50,11 @@ module.exports = {
 				else{
 					sendpacket = JSON.stringify(answer);	
 				}
+								
 				wire.send([socketid, requestid, sendpacket]);
+			}, {
+				socketid:socketid,
+				requestid:requestid
 			})
 
 		})

@@ -132,6 +132,10 @@ Mesh.prototype.addworker = function(worker){
 */
 Mesh.prototype.removeworker = function(worker){
 
+	if(!this.available[worker.id]){
+		return;
+	}
+	
 	delete(this.available[worker.id]);
 	delete(this.connected[worker.id]);
 
