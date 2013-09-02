@@ -63,7 +63,7 @@ function Wire(options){
 	EventEmitter.call(this);
 
 	options = this.options = options || {};
-	this.id = tools.littleid();
+	this.id = options.id || tools.littleid();
 	this.type = options.type || 'router';
 	this.direction = options.direction || 'bind';
 	this._pluggedin = false;

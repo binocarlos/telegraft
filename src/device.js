@@ -25,7 +25,7 @@ var async = require('async');
 
 module.exports = {
 
-	rpcserver:function(direction){
+	rpcserver:function(direction, id){
 
 		var wire = Wire({
 			direction:direction,
@@ -100,8 +100,16 @@ module.exports = {
 			} catch (e){
 				
 			}
-			
 
+			/*
+			
+				timeout after 30 seconds
+				
+			*/
+			callback.timeoutid = setTimeout(function(){
+				callback('the request timed out');
+			}, 30000)
+			
 			return requestid;
 		}
 
@@ -124,6 +132,9 @@ module.exports = {
 				console.log('NO CALLBACK!');
 				console.dir(requestid);
 				return;
+			}
+			else{
+				clearTimeout(callback.timeoutid);
 			}
 			
 			if(payload.indexOf('_error:')==0){

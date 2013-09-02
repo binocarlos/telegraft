@@ -65,7 +65,7 @@ function HQClient(options){
 	})
 */	
 
-	this.initializestate();
+	//this.initializestate();
 }
 
 util.inherits(HQClient, EventEmitter);
@@ -79,12 +79,13 @@ HQClient.prototype.unplug = function(){
 
 HQClient.prototype.initializestate = function(){
 	var self = this;
+	/*
 	this.client.send({
 		method:'state'
 	}, function(error, packet){
 		var state = packet.result;
 		self.router.initialize(state);
-	})
+	})*/
 }
 
 /*
@@ -182,6 +183,9 @@ HQClient.prototype.rpcproxy = function(){
 			*/
 
 			var result = self.router.search(route);
+
+			console.log('-------------------------------------------');
+			console.dir(result);
 
 			/*
 			

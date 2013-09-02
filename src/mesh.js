@@ -130,6 +130,13 @@ Mesh.prototype.addworker = function(worker){
 Mesh.prototype.removeworker = function(worker){
 	var self = this;
 
+	console.log('-------------------------------------------');
+	console.log('-------------------------------------------');
+	console.log('removing worker');
+
+	console.dir(worker);
+	console.dir(this.available);
+
 	if(!this.available[worker.id]){
 		return;
 	}
@@ -156,28 +163,14 @@ Mesh.prototype.removeworker = function(worker){
 	}
 	else{
 
-		var hit = false;
-		_.each(this.connected, function(checkworker, id){
-			if(checkworker.address==worker.address){
-				hit = true;
-			}
-		})
-		
-		if(!hit){
-			/*
-		
-				check to see if another worker has connected on this address
+		try{
 
-				i.e. quick server reloads
-				
-			*/
-			try{
-				this.wire.disconnect(worker.address);
-			} catch(e){
+			this.wire.disconnect(worker.address);
+		} catch(e){
 
-			}
 		}
-		
+
+		//this.wire.plugin(worker.address);
 	}
 
 	if(_.keys(this.available).length<=0){

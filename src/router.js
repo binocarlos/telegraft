@@ -52,29 +52,8 @@ function Router(hqmode){
 	};
 
 
-	/*
+	this.setup_monitor();
 	
-		check the connections each second
-		
-	*/
-	self.intervalid = setInterval(function(){
-
-		/*
-		
-			loop each worker and check that we have had a heartbeat within the past 2 seconds
-			
-		*/
-		_.each(self.state.workers, function(worker, id){
-			var lastseen = self.state.lastseen[worker.id];
-			var nowtime = new Date().getTime();
-			var gap = nowtime - lastseen;	
-
-			if(gap>2000){
-				self.removeworker(worker);
-			}
-		})
-
-	}, 1000)
 
 }
 
@@ -112,15 +91,26 @@ Router.prototype.search = function(route){
 			return self.state.workers[id];
 		})
 
-		var results = {
-			matchedroute:finalroute,
-			workers:workers
+		if(workers && workers.length>0){
+			var results = {
+				matchedroute:finalroute,
+				workers:workers
+			}
+
+			self.cache[route] = results;
+			return results;	
+		}
+		else{
+			return {
+				matchedroute:null,
+				workers:[]
+			}
 		}
 
-		self.cache[route] = results;
-		return results;
+		
 	}
 
+	// hit first time
 	if(workerids){
 		return mapids(workerids, route);
 	}
@@ -145,7 +135,7 @@ Router.prototype.search = function(route){
 	var parts = route.split('/');
 	while(!workerids && parts.length>0){
 		parts.pop();
-		workerids = self.state.routes[self.processroute(parts.join('/'))];
+		workerids = self.state.routes[parts.join('/')];
 	}
 
 	var finalroute = parts.join('/');
@@ -160,7 +150,6 @@ Router.prototype.unplug = function(){
 	this.cache = {};
 
 	this.state = {
-		intervals:{},
 		lastseen:{},
 		workers:{},
 		routes:{}
@@ -171,105 +160,101 @@ Router.prototype.refresh = function(worker){
 	this.state.lastseen[worker.id] = new Date().getTime();
 }
 
+Router.prototype.setup_monitor = function(){
+	var self = this;
+	/*
+	
+		check the connections each second
+		
+	*/
+	self.intervalid = setInterval(function(){
+
+		/*
+		
+			loop each worker and check that we have had a heartbeat within the past 2 seconds
+			
+		*/
+		_.each(self.state.workers, function(worker, id){
+			var lastseen = self.state.lastseen[worker.id];
+			var nowtime = new Date().getTime();
+			var gap = nowtime - lastseen;
+
+			if(gap>2000){
+				self.removeworker(worker);
+			}
+		})
+
+	}, 1000)
+}
+
 Router.prototype.heartbeat = function(packet){
 	var self = this;
 	var routes = packet.routes;
 	var worker = packet.worker;
 
+	/*
+	
+		we check each time if we have not see this router + worker
+
+		this is the auto-announce
+		
+	*/
 	_.each(routes, function(v, route){
 		var seenroutes = self.state.routes[route] || {};
 
 		var seen = seenroutes[worker.id] ? true : false;
 
 		if(!seen){
-			self.add(route, worker);
+			self.addroute(route, worker);
 		}
 	})
 
 	self.state.lastseen[worker.id] = new Date().getTime();
 }
 
-Router.prototype.add = function(route, worker){
-	var self = this;
-	this.cache = {};
-
-	if(this.state.workers[worker.id]){
-		var masterworker = this.state.workers[worker.id];
-		masterworker.routes = _.extend(masterworker.routes, worker.routes || {});
-	}
-	else{
-		this.state.workers[worker.id] = worker;	
-	}
-	
-	this.addroute(route, worker);
-
-	return this;
-}
-
-Router.prototype.remove = function(route, worker){
-	if(arguments.length==1){
-		worker = route;
-		route = null;		
-	}
-
-	this.cache = {};
-
-	if(route){
-		this.removeroute(route, worker);	
-	}
-	else{
-		this.removeworker(worker);
-	}
-	
-	return this;
-}
-
-
-
 Router.prototype.addroute = function(route, worker){
-	var workerids = this.state.routes[route] || {};
+	
+	
+	this.cache = {};
+	this.state.workers[worker.id] = worker;
 	
 	/*
 	
-		we already have this route + worker id
-		
+		the map of workers we have for the route
+
+		{
+			"/my/db":{
+				1234:{},
+				5678:{}
+			}
+		}
+
 	*/
+	var workerids = this.state.routes[route] || {};
 	workerids[worker.id] = new Date().getTime();
-	var routes = worker.routes || {};
-	routes[route] = true;
-	worker.routes = routes;
 	this.state.routes[route] = workerids;
+
 	this.emit('added', route, worker);
 	this.emit('added.' + route, route, worker);
-	return this;
-}
 
-Router.prototype.removeroute = function(route, worker){
-	var workerids = this.state.routes[route] || {};
-	delete(workerids[worker.id]);
-	var routes = worker.routes || {};
-	delete(routes[route]);
-	worker.routes = routes;
-	this.state.routes[route] = workerids;
-	this.emit('removed', route, worker);
-	this.emit('removed.' + route, route, worker);
-	
 	return this;
 }
 
 Router.prototype.removeworker = function(remworker){
 	var self = this;
+	this.cache = {};
+
 	var worker = this.state.workers[remworker.id];
-	
 	_.each(this.state.routes, function(workers, route){
-		if(workers[worker.id]){
-			self.removeroute(route, worker);
+		if(workers[remworker.id]){
+			delete(workers[remworker.idj]);
+			self.emit('removed', route, remworker);
+			self.emit('removed.' + route, route, remworker);		
 		}
-		delete(workers[worker.id]);
 	})
 
-	delete(this.state.workers[worker.id]);
-	delete(this.state.lastseen[worker.id]);
+	delete(this.state.workers[remworker.id]);
+	delete(this.state.lastseen[remworker.id]);
 	
 	return this;
 }
