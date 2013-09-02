@@ -129,6 +129,7 @@ Mesh.prototype.addworker = function(worker){
 */
 Mesh.prototype.removeworker = function(worker){
 	var self = this;
+
 	if(!this.available[worker.id]){
 		return;
 	}
@@ -162,6 +163,7 @@ Mesh.prototype.removeworker = function(worker){
 			}
 		})
 		
+		if(!hit){
 			/*
 		
 				check to see if another worker has connected on this address
@@ -172,11 +174,8 @@ Mesh.prototype.removeworker = function(worker){
 			try{
 				this.wire.disconnect(worker.address);
 			} catch(e){
-				
-			}	
 
-		if(hit){
-			this.wire.plugin(worker.address);
+			}
 		}
 		
 	}

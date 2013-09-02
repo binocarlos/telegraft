@@ -133,13 +133,13 @@ module.exports = {
 			else{
 				try{
 					var packet = JSON.parse(payload);
+					callback(null, packet);
 				} catch (e){
 					console.error('There was an error parsing JSON')
 					console.error(packet);
 				}
-				callback(null, packet);
+				
 			}
-
 			delete(callbacks[requestid]);
 		})
 

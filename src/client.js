@@ -180,6 +180,7 @@ HQClient.prototype.rpcproxy = function(){
 				do a search for workers
 				
 			*/
+
 			var result = self.router.search(route);
 
 			/*

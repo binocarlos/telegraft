@@ -253,14 +253,23 @@ Router.prototype.removeroute = function(route, worker){
 	this.state.routes[route] = workerids;
 	this.emit('removed', route, worker);
 	this.emit('removed.' + route, route, worker);
+	
 	return this;
 }
 
-Router.prototype.removeworker = function(worker){
-	var worker = this.state.workers[worker.id];
-	for(var route in worker.routes){
-		this.removeroute(route, worker);
-	}
+Router.prototype.removeworker = function(remworker){
+	var self = this;
+	var worker = this.state.workers[remworker.id];
+	
+	_.each(this.state.routes, function(workers, route){
+		if(workers[worker.id]){
+			self.removeroute(route, worker);
+		}
+		delete(workers[worker.id]);
+	})
+
 	delete(this.state.workers[worker.id]);
+	delete(this.state.lastseen[worker.id]);
+	
 	return this;
 }
