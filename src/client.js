@@ -184,9 +184,6 @@ HQClient.prototype.rpcproxy = function(){
 
 			var result = self.router.search(route);
 
-			console.log('-------------------------------------------');
-			console.dir(result);
-
 			/*
 			
 				we have no routes

@@ -130,13 +130,6 @@ Mesh.prototype.addworker = function(worker){
 Mesh.prototype.removeworker = function(worker){
 	var self = this;
 
-	console.log('-------------------------------------------');
-	console.log('-------------------------------------------');
-	console.log('removing worker');
-
-	console.dir(worker);
-	console.dir(this.available);
-
 	if(!this.available[worker.id]){
 		return;
 	}

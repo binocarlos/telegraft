@@ -8,24 +8,25 @@ describe('router', function(){
 
 		var router = telegraft.router();
 
-		router.add('warehouse:/hello', {
+		router.add('/hello', {
 			id:10
 		})
 
-		router.add('warehouse:/hello', {
+		router.add('/hello', {
 			id:11
 		})
 
-		router.add('warehouse:/', {
+		router.add('/', {
 			id:12
 		})
 
-		var results1 = router.search('warehouse:/hello/123');
+		var results1 = router.search('/hello/123');
 		results1.workers.length.should.equal(2);
 		results1.workers[0].id.should.equal(10);
 		results1.workers[1].id.should.equal(11);
 
-		var results2 = router.search('warehouse:/other');
+		var results2 = router.search('/other');
+
 		results2.workers.length.should.equal(1);
 		results2.workers[0].id.should.equal(12);
 
@@ -37,33 +38,34 @@ describe('router', function(){
 
 		var router = telegraft.router();
 
-		router.on('added.warehouse:/hello', function(){
+		router.on('added./hello', function(){
 			counter++;
 		})
 
-		router.on('removed.warehouse:/hello', function(){
+		router.on('removed./hello', function(){
 			counter++;
 		})
 
-		router.add('warehouse:/hello', {
+		router.add('/hello', {
 			id:10
 		})
 
-		router.add('warehouse:/hello', {
+		router.add('/hello', {
 			id:11
 		})
 
-		router.add('warehouse:/', {
+		router.add('/', {
 			id:12
 		})
 
 
-		router.remove('warehouse:/hello', {
+		router.removeworker({
 			id:11
 		})
 
+
 		counter.should.equal(3);
-		var results = router.search('warehouse:/hello');
+		var results = router.search('/hello');
 		results.workers.length.should.equal(1);
 
 	})

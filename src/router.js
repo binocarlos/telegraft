@@ -135,10 +135,10 @@ Router.prototype.search = function(route){
 	var parts = route.split('/');
 	while(!workerids && parts.length>0){
 		parts.pop();
-		workerids = self.state.routes[parts.join('/')];
+		workerids = self.state.routes[parts.join('/') || '/'];
 	}
 
-	var finalroute = parts.join('/');
+	var finalroute = parts.join('/') || '/';
 
 	return mapids(workerids, finalroute);
 }
@@ -212,7 +212,7 @@ Router.prototype.heartbeat = function(packet){
 	self.state.lastseen[worker.id] = new Date().getTime();
 }
 
-Router.prototype.addroute = function(route, worker){
+Router.prototype.addroute = Router.prototype.add = function(route, worker){
 	
 	
 	this.cache = {};
@@ -245,9 +245,16 @@ Router.prototype.removeworker = function(remworker){
 	this.cache = {};
 
 	var worker = this.state.workers[remworker.id];
+
 	_.each(this.state.routes, function(workers, route){
 		if(workers[remworker.id]){
-			delete(workers[remworker.idj]);
+			var newworkers = {};
+			for(var wid in workers){
+				if(wid!=remworker.id){
+					newworkers[wid] = workers[wid];
+				}
+			}
+			self.state.routes[route] = newworkers;
 			self.emit('removed', route, remworker);
 			self.emit('removed.' + route, route, remworker);		
 		}
@@ -255,6 +262,7 @@ Router.prototype.removeworker = function(remworker){
 
 	delete(this.state.workers[remworker.id]);
 	delete(this.state.lastseen[remworker.id]);
+
 	
 	return this;
 }
