@@ -36,25 +36,22 @@ module.exports = {
 
 		wire.on('message', function(frames){
 
-			var socketid = frames[0];
 			var requestid = frames[1].toString();
 			var payload = frames[2].toString();
-
 			var packet = JSON.parse(payload);
 
 			wire.emit('request', packet, function(error, answer){
-				var sendpacket = answer;
-				if(error){
-					sendpacket = '_error:' + error;
-				}
-				else{
-					sendpacket = JSON.stringify(answer);	
-				}
-								
-				wire.send([socketid, requestid, sendpacket]);
-			}, {
-				socketid:socketid,
-				requestid:requestid
+				process.nextTick(function(){
+					var sendpacket = answer;
+					if(error){
+						frames[2] = '_error:' + error;
+					}
+					else{
+						frames[2] = JSON.stringify(answer);	
+					}
+									
+					wire.send(frames);
+				})
 			})
 
 		})
@@ -83,6 +80,7 @@ module.exports = {
 			var self = this;
 			var frames = Array.prototype.slice.call(arguments, 0, arguments.length);
 
+
 			var callback = null;
 
 			if(typeof(frames[frames.length-1])==='function'){
@@ -97,7 +95,12 @@ module.exports = {
 
 			callbacks[requestid] = callback;
 
-			_send.apply(wire, [[requestid, packet]]);
+			try{
+				_send.apply(wire, [[requestid, packet]]);	
+			} catch (e){
+				
+			}
+			
 
 			return requestid;
 		}

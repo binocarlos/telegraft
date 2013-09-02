@@ -108,60 +108,15 @@ HQServer.prototype.broadcast = function(packet, callback){
 
 /*
 
-	a worker has arrived
-	
-*/
-HQServer.prototype.arrive = function(packet, callback){
-	this.router.add(packet.route, packet.worker);
-	this.radio.broadcast('worker.arrive', {
-		route:packet.route,
-		worker:packet.worker
-	})
-	this.emit('worker.arrive', {
-		route:packet.route,
-		worker:packet.worker
-	})
-	process.nextTick(function(){
-		callback(null, {
-			result:true
-		})
-	})
-}
-
-/*
-
 	a worker has heartbeated
 	
 */
 HQServer.prototype.heartbeat = function(packet, callback){
-	this.router.refresh(packet.worker);
-	this.emit('worker.heartbeat', {
-		worker:packet.worker
-	})
-	process.nextTick(function(){
-		callback(null, {
-			result:true
-		})	
-	})
 	
-}
+	this.radio.broadcast('worker.heartbeat', packet);
 
+	this.emit('worker.heartbeat', packet);
 
-/*
-
-	a worker has left
-	
-*/
-HQServer.prototype.leave = function(packet, callback){
-	this.router.remove(packet.route, packet.worker);
-	this.radio.broadcast('worker.leave', {
-		route:packet.route,
-		worker:packet.worker
-	})
-	this.emit('worker.leave', {
-		route:packet.route,
-		worker:packet.worker
-	})
 	process.nextTick(function(){
 		callback(null, {
 			result:true

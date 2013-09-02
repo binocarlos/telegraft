@@ -64,16 +64,20 @@ function Mesh(options){
 		self.addworker(worker);
 	})
 
-	this.wire.on('timeout', function(req, reply){
-		self.emit('timeout', req, reply);
-	})
-
 	this.router.on('added.' + this.route, function(route, worker){
 		self.addworker(worker);
+		console.log('-------------------------------------------');
+		console.log('-------------------------------------------');
+		console.log('ADD WORKER ---- ' + route);
+		console.dir(worker);
 		self.emit('added', route, worker);
 	})
 
 	this.router.on('removed.' + this.route, function(route, worker){
+		console.log('-------------------------------------------');
+		console.log('-------------------------------------------');
+		console.log('REMOVE WORKER ---- ' + route);
+		console.dir(worker);
 		self.removeworker(worker);
 		self.emit('removed', route, worker);
 	})
@@ -135,7 +139,11 @@ Mesh.prototype.removeworker = function(worker){
 	if(!this.available[worker.id]){
 		return;
 	}
-	
+
+	if(!worker){
+		return;
+	}
+
 	delete(this.available[worker.id]);
 	delete(this.connected[worker.id]);
 
@@ -153,7 +161,11 @@ Mesh.prototype.removeworker = function(worker){
 		}
 	}
 	else{
-		this.wire.disconnect(worker.address);
+		try{
+			this.wire.disconnect(worker.address);
+		} catch(e){
+			
+		}
 	}
 
 	if(_.keys(this.available).length<=0){

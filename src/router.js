@@ -46,49 +46,36 @@ function Router(hqmode){
 	this.cache = {};
 
 	this.state = {
-		intervals:[],
 		lastseen:{},
 		workers:{},
 		routes:{}
 	};
 
+
 	/*
 	
-		in HQ mode we are looking after the whole network with heartbeats
+		check the connections each second
 		
 	*/
-	if(this.hqmode){
+	self.intervalid = setInterval(function(){
 
-		this.on('added', function(route, worker){
-
-			/*
+		/*
+		
+			loop each worker and check that we have had a heartbeat within the past 2 seconds
 			
-				if this is the first time we have seen the worker then setup
-				an interval to watch for it's heartbeat timeout
-			*/
+		*/
+		_.each(self.state.workers, function(worker, id){
+			var lastseen = self.state.lastseen[worker.id];
+			var nowtime = new Date().getTime();
+			var gap = nowtime - lastseen;	
 
-			if(!self.state.lastseen[worker.id]){
-				var intervalid = setInterval(function(){
-
-					var lastseen = self.state.lastseen[worker.id];
-					var nowtime = new Date().getTime();
-					var gap = nowtime - lastseen;
-
-					if(gap>2000){
-						clearInterval(self.state.intervals[worker.id + ':' + route]);
-						self.removeworker(worker);
-					}
-				}, 1000)
-
-				if(self.state.intervals[worker.id + ':' + route]){
-					clearInterval(self.state.intervals[worker.id + ':' + route]);
-				}
-
-				self.state.intervals[worker.id + ':' + route] = intervalid;
-			}	
+			if(gap>2000){
+				self.removeworker(worker);
+			}
 		})
-	}
-	
+
+	}, 1000)
+
 }
 
 util.inherits(Router, EventEmitter);
@@ -180,6 +167,28 @@ Router.prototype.unplug = function(){
 	};
 }
 
+Router.prototype.refresh = function(worker){
+	this.state.lastseen[worker.id] = new Date().getTime();
+}
+
+Router.prototype.heartbeat = function(packet){
+	var self = this;
+	var routes = packet.routes;
+	var worker = packet.worker;
+	
+	_.each(routes, function(v, route){
+		var seenroutes = self.state.routes[route] || {};
+
+		var seen = seenroutes[worker.id] ? true : false;
+
+		if(!seen){
+			self.add(route, worker);
+		}
+	})
+
+	self.state.lastseen[worker.id] = new Date().getTime();
+}
+
 Router.prototype.add = function(route, worker){
 	var self = this;
 	this.cache = {};
@@ -193,7 +202,6 @@ Router.prototype.add = function(route, worker){
 	}
 	
 	this.addroute(route, worker);
-	this.state.lastseen[worker.id] = new Date().getTime();
 
 	return this;
 }
@@ -216,9 +224,6 @@ Router.prototype.remove = function(route, worker){
 	return this;
 }
 
-Router.prototype.refresh = function(worker){
-	this.state.lastseen[worker.id] = new Date().getTime();
-}
 
 
 Router.prototype.addroute = function(route, worker){
@@ -229,10 +234,6 @@ Router.prototype.addroute = function(route, worker){
 		we already have this route + worker id
 		
 	*/
-	
-	if(workerids[worker.id]){
-		return this;
-	}
 	workerids[worker.id] = new Date().getTime();
 	var routes = worker.routes || {};
 	routes[route] = true;

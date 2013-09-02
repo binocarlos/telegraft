@@ -54,13 +54,15 @@ function HQClient(options){
 
 	this.router = Router();
 
-	this.radio.subscribe('worker.arrive', function(packet, routingkey){
-		self.router.add(packet.route, packet.worker);
+	this.radio.subscribe('worker.heartbeat', function(packet, routingkey){
+		self.router.heartbeat(packet);
 	})
 
+/*
 	this.radio.subscribe('worker.leave', function(packet, routingkey){
 		self.router.remove(packet.route, packet.worker);
 	})
+*/	
 
 	this.initializestate();
 }
@@ -96,12 +98,21 @@ HQClient.prototype.rpcserver = function(worker){
 	var self = this;
 	var server = Device.rpcserver('bind');
 	server.plugin(worker.address);
-	server.heartbeat_id = setInterval(function(){
-		self.send_heartbeat(worker);
-	}, 1000)
+	self.registered_routes = {};
+	function send_heartbeat(){
+		self.client.send({
+			method:'heartbeat',
+			routes:self.registered_routes,
+			worker:worker
+		}, function(error, result){
+
+		})
+	}
+	server.heartbeat_id = setInterval(send_heartbeat, 1000)
 
 	server.bind = function(useroute){
-		self.register_service(useroute, worker);
+		self.registered_routes[useroute] = true;
+		send_heartbeat();
 		
 		return this;
 	}
@@ -227,31 +238,4 @@ HQClient.prototype.rpcproxy = function(){
 
 	return proxy;
 	
-}
-
-/*
-
-	a worker has arrived
-	
-*/
-HQClient.prototype.register_service = function(route, worker){
-	var self = this;
-	this.client.send({
-		method:'arrive',
-		route:route,
-		worker:worker
-	}, function(error, result){
-
-	})
-
-}
-
-HQClient.prototype.send_heartbeat = function(worker){
-	var self = this;
-	this.client.send({
-		method:'heartbeat',
-		worker:worker
-	}, function(error, result){
-
-	})
 }
