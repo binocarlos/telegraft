@@ -175,7 +175,7 @@ Router.prototype.heartbeat = function(packet){
 	var self = this;
 	var routes = packet.routes;
 	var worker = packet.worker;
-	
+
 	_.each(routes, function(v, route){
 		var seenroutes = self.state.routes[route] || {};
 
