@@ -34,7 +34,7 @@ function factory(options){
 process.on('SIGINT', function() {
 
 	setTimeout(function(){
-		process.exit();	
+		process.exit();
 	}, 50)
 	
 })

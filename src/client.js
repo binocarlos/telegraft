@@ -55,6 +55,7 @@ function HQClient(options){
 	this.router = Router();
 
 	this.radio.subscribe('worker.heartbeat', function(packet, routingkey){
+
 		self.router.heartbeat(packet);
 	})
 
