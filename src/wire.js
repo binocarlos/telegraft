@@ -138,7 +138,11 @@ Wire.prototype.plugin = function(address){
 	
 */
 Wire.prototype.disconnect = function(address){
-	this._socket.disconnect(address);
+	try{
+		this._socket.disconnect(address);
+	} catch (e){
+		
+	}
 }
 
 Wire.prototype.unplug = function(){
