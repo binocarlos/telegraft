@@ -10,8 +10,8 @@ describe('HQ', function(){
 	
 		clear up the wires after each test
 		
-
-
+	*/
+	
 	var endpoints = {
 		server:'tcp://127.0.0.1:5678',
 		radio:'tcp://127.0.0.1:5679'
@@ -142,6 +142,6 @@ describe('HQ', function(){
 
 
 	})
-	*/
+
 
 })

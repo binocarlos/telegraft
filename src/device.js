@@ -36,23 +36,30 @@ module.exports = {
 
 		wire.on('message', function(frames){
 
+			var socketid = frames[0].toString();
 			var requestid = frames[1].toString();
 			var payload = frames[2].toString();
 			var packet = JSON.parse(payload);
 
-			wire.emit('request', packet, function(error, answer){
-				process.nextTick(function(){
+			process.nextTick(function(){
+				wire.emit('request', packet, function(error, answer){
+
 					var sendpacket = answer;
+					var payload = '';
 					if(error){
-						frames[2] = '_error:' + error;
+						payload = '_error:' + error;
 					}
 					else{
-						frames[2] = JSON.stringify(answer);	
+						payload = JSON.stringify(sendpacket);	
 					}
-									
-					wire.send(frames);
-				})
+					// remove the ack interval - we have an answer
+					//clearInterval(ackinterval);
+					process.nextTick(function(){										
+						wire.send([socketid, requestid, payload]);
+					})
+				})	
 			})
+			
 
 		})
 
@@ -67,9 +74,7 @@ module.exports = {
 		})
 
 		var _send = wire.send;
-
 		var callbacks = {};
-
 
 		/*
 		
@@ -91,24 +96,36 @@ module.exports = {
 			}
 
 			var requestid = tools.littleid();
-			var packet = JSON.stringify(frames.pop());
+			var packet_json = frames.pop();
+			var packet = JSON.stringify(packet_json);
 
 			callbacks[requestid] = callback;
 
-			try{
-				_send.apply(wire, [[requestid, packet]]);	
-			} catch (e){
-				
-			}
-
 			/*
 			
-				timeout after 30 seconds
-				
+				freak out after 10 seconds - until we get more sophisticated this is how we deal with gaps
+				- i.e. we tell them oops
+
+				this happens when sockets leave and join the network
+
+				to do things gracefully - we need to tell the server that is leaving to stop heartbeating
+				but remaing serving - then kill it like 10 seconds after
+
 			*/
-			callback.timeoutid = setTimeout(function(){
-				callback('the request timed out');
-			}, 30000)
+			setTimeout(function(){
+				if(callbacks[requestid]){
+					callbacks[requestid]('the server did not respond');
+					delete(callbacks[requestid]);
+				}
+			}, 10000)
+
+			process.nextTick(function(){
+				try{
+					_send.apply(wire, [[requestid, packet]]);	
+				} catch (e){
+					
+				}	
+			})
 			
 			return requestid;
 		}
@@ -125,16 +142,23 @@ module.exports = {
 
 			var callback = callbacks[requestid];
 
+			// we can only assume that a non acked request actually made it through
+			// we will want to know about these
 			if(!callback){
+
 				console.log('-------------------------------------------');
+				console.log('*******************************************');
 				console.log('-------------------------------------------');
+				console.log('*******************************************');
 				console.log('-------------------------------------------');
+				console.log('*******************************************');
+
 				console.log('NO CALLBACK!');
 				console.dir(requestid);
 				return;
 			}
 			else{
-				clearTimeout(callback.timeoutid);
+				clearInterval(callback.timeoutid);
 			}
 			
 			if(payload.indexOf('_error:')==0){
@@ -146,8 +170,11 @@ module.exports = {
 					var packet = JSON.parse(payload);
 					callback(null, packet);
 				} catch (e){
+					console.dir(e);
+					console.log(e.stack);
 					console.error('There was an error parsing JSON')
-					console.error(packet);
+					console.log(payload);
+					callback('There was an error parsing JSON');
 				}
 				
 			}
