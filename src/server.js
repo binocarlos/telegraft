@@ -30,6 +30,9 @@ function factory(options){
 function HQServer(options){
 	EventEmitter.call(this);
 
+	options = options || {};
+	this.options = options;
+
 	var self = this;
 
 	this.router = Router(true);
@@ -77,7 +80,7 @@ HQServer.prototype.handle = function(packet, callback){
 		this[method].apply(this, [packet, callback]);
 	}
 	else{
-		callback(method + ' not found');
+		this.emit('packet', packet, callback);
 	}
 
 	return this;
@@ -113,6 +116,15 @@ HQServer.prototype.broadcast = function(packet, callback){
 */
 HQServer.prototype.heartbeat = function(packet, callback){
 	
+	// if they specify a map function it gives us a chance to turn the endpoint into something else
+	// before telling the rest of the network
+	var packet = this.options.map_heartbeat ? this.options.map_heartbeat(packet) : packet;
+
+	// this gives the mapper a chance to say don't broadcast yet
+	if(!packet){
+		return;
+	}
+
 	this.radio.broadcast('worker.heartbeat', packet);
 
 	this.emit('worker.heartbeat', packet);

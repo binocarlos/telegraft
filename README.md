@@ -8,7 +8,7 @@ You need to have ZeroMQ on your system:
 
 For Ubuntu:
 
-	sudo apt-get libzmq3 libzmq3-dev
+	sudo apt-get install libzmq3 libzmq3-dev
 
 Then:
 
@@ -16,7 +16,7 @@ Then:
 
 Note - if you still get errors installing try:
 
-	sudo apt-get build-essential
+	sudo apt-get install build-essential
 
 ## Usage
 
